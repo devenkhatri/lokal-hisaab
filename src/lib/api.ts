@@ -1,5 +1,13 @@
-import { supabase } from './supabase'
-import { Transaction, Account, Location } from './supabase'
+import { supabase } from '@/integrations/supabase/client'
+import type { Database } from '@/integrations/supabase/types'
+
+type Transaction = Database['public']['Tables']['transactions']['Row'] & {
+  accounts?: Database['public']['Tables']['accounts']['Row']
+  locations?: Database['public']['Tables']['locations']['Row']
+}
+
+type Account = Database['public']['Tables']['accounts']['Row']
+type Location = Database['public']['Tables']['locations']['Row']
 
 // Transactions API
 export const transactionsApi = {
