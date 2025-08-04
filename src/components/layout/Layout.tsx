@@ -10,7 +10,7 @@ export function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-background">
       <Sidebar />
       <div className="lg:pl-64">
-        <main className="p-4 lg:p-8">
+        <main className="p-6">
           {children}
         </main>
       </div>
