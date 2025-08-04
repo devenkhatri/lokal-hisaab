@@ -13,6 +13,7 @@ import Transactions from "./pages/Transactions"
 import Accounts from "./pages/Accounts"
 import Locations from "./pages/Locations"
 import Reports from "./pages/Reports"
+import Settings from "./pages/Settings"
 import NotFound from "./pages/NotFound"
 
 const queryClient = new QueryClient()
@@ -76,6 +77,13 @@ const App = () => {
               <ProtectedRoute>
                 <Layout>
                   <Reports />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Settings />
                 </Layout>
               </ProtectedRoute>
             } />
