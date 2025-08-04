@@ -8,8 +8,7 @@ import {
   BarChart3, 
   LogOut,
   Menu,
-  X,
-  Settings
+  X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -22,10 +21,6 @@ const navigation = [
   { name: 'Accounts', href: '/accounts', icon: Users },
   { name: 'Locations', href: '/locations', icon: MapPin },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
-]
-
-const settingsNavigation = [
-  { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
 export function Sidebar() {
@@ -100,26 +95,6 @@ export function Sidebar() {
               </NavLink>
             ))}
           </nav>
-
-          {/* Settings */}
-          <div className="px-4 pb-4">
-            {settingsNavigation.map((item) => (
-              <NavLink
-                key={item.name}
-                to={item.href}
-                onClick={() => setIsOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                  isActive(item.href)
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                )}
-              >
-                <item.icon className="w-4 h-4" />
-                {item.name}
-              </NavLink>
-            ))}
-          </div>
 
           {/* Logout */}
           <div className="p-4 border-t border-border">
