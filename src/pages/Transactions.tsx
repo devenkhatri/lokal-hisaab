@@ -172,6 +172,15 @@ export default function Transactions() {
     })
   }
 
+  const openAddDialog = async () => {
+    resetForm()
+    setEditingTransaction(null)
+    // Generate and show the new transaction number
+    const newTxnNo = await generateTransactionNo()
+    setFormData(prev => ({ ...prev, transaction_no: newTxnNo }))
+    setIsFormOpen(true)
+  }
+
   const openEditDialog = (transaction: any) => {
     setEditingTransaction(transaction)
     setFormData({
@@ -495,7 +504,7 @@ export default function Transactions() {
           
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => { resetForm(); setEditingTransaction(null) }}>
+              <Button onClick={openAddDialog}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Transaction
               </Button>
