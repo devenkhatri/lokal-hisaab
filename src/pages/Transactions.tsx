@@ -448,52 +448,6 @@ export default function Transactions() {
             Export CSV
           </Button>
           
-          <Dialog open={isAddAccountOpen} onOpenChange={setIsAddAccountOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Account
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Account</DialogTitle>
-                <DialogDescription>
-                  Create a new account to use in transactions
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleNewAccount} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="account-name">Account Name *</Label>
-                  <Input
-                    id="account-name"
-                    value={newAccountData.name}
-                    onChange={(e) => setNewAccountData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter account name"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="phone-number">Phone Number</Label>
-                  <Input
-                    id="phone-number"
-                    value={newAccountData.phone_number}
-                    onChange={(e) => setNewAccountData(prev => ({ ...prev, phone_number: e.target.value }))}
-                    placeholder="Enter phone number"
-                  />
-                </div>
-                
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsAddAccountOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">Create Account</Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-          
           <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
