@@ -643,13 +643,7 @@ export default function Transactions() {
                     </div>
                     <Select 
                       value={formData.account_id} 
-                      onValueChange={(value) => {
-                        if (value === 'add_new') {
-                          setIsAddAccountOpen(true)
-                        } else {
-                          setFormData(prev => ({ ...prev, account_id: value }))
-                        }
-                      }}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, account_id: value }))}
                     >
                       <SelectTrigger tabIndex={4} className="h-9">
                         <SelectValue placeholder="Select account" />
@@ -660,10 +654,6 @@ export default function Transactions() {
                             {account.name}
                           </SelectItem>
                         ))}
-                        <SelectItem value="add_new" className="text-primary font-medium">
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add New Account
-                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
