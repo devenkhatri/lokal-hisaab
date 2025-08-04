@@ -9,6 +9,8 @@ import { dummyAuth } from "@/lib/supabase"
 import { Layout } from "@/components/layout/Layout"
 import Login from "./pages/Login"
 import Dashboard from "./pages/Dashboard"
+import Transactions from "./pages/Transactions"
+import Accounts from "./pages/Accounts"
 import NotFound from "./pages/NotFound"
 
 const queryClient = new QueryClient()
@@ -50,20 +52,14 @@ const App = () => {
             <Route path="/transactions" element={
               <ProtectedRoute>
                 <Layout>
-                  <div className="p-8 text-center">
-                    <h1 className="text-2xl font-bold">Transactions</h1>
-                    <p className="text-muted-foreground">Coming soon...</p>
-                  </div>
+                  <Transactions />
                 </Layout>
               </ProtectedRoute>
             } />
             <Route path="/accounts" element={
               <ProtectedRoute>
                 <Layout>
-                  <div className="p-8 text-center">
-                    <h1 className="text-2xl font-bold">Accounts</h1>
-                    <p className="text-muted-foreground">Coming soon...</p>
-                  </div>
+                  <Accounts />
                 </Layout>
               </ProtectedRoute>
             } />
