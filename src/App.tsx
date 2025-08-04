@@ -11,6 +11,8 @@ import Login from "./pages/Login"
 import Dashboard from "./pages/Dashboard"
 import Transactions from "./pages/Transactions"
 import Accounts from "./pages/Accounts"
+import Locations from "./pages/Locations"
+import Reports from "./pages/Reports"
 import NotFound from "./pages/NotFound"
 
 const queryClient = new QueryClient()
@@ -66,20 +68,14 @@ const App = () => {
             <Route path="/locations" element={
               <ProtectedRoute>
                 <Layout>
-                  <div className="p-8 text-center">
-                    <h1 className="text-2xl font-bold">Locations</h1>
-                    <p className="text-muted-foreground">Coming soon...</p>
-                  </div>
+                  <Locations />
                 </Layout>
               </ProtectedRoute>
             } />
             <Route path="/reports" element={
               <ProtectedRoute>
                 <Layout>
-                  <div className="p-8 text-center">
-                    <h1 className="text-2xl font-bold">Reports</h1>
-                    <p className="text-muted-foreground">Coming soon...</p>
-                  </div>
+                  <Reports />
                 </Layout>
               </ProtectedRoute>
             } />
