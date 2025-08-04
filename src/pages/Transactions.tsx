@@ -42,6 +42,8 @@ export default function Transactions() {
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importPreview, setImportPreview] = useState<any[]>([])
   const [importing, setImporting] = useState(false)
+  const [isAddAccountOpen, setIsAddAccountOpen] = useState(false)
+  const [newAccountData, setNewAccountData] = useState({ name: '', phone_number: '' })
   const { toast } = useToast()
 
   // Form state
@@ -179,6 +181,45 @@ export default function Transactions() {
     const newTxnNo = await generateTransactionNo()
     setFormData(prev => ({ ...prev, transaction_no: newTxnNo }))
     setIsFormOpen(true)
+  }
+
+  const handleNewAccount = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!newAccountData.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Account name is required",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      const newAccount = await accountsApi.create(newAccountData)
+      
+      // Refresh accounts list
+      const updatedAccounts = await accountsApi.getAll()
+      setAccounts(updatedAccounts)
+      
+      // Auto-select the new account
+      setFormData(prev => ({ ...prev, account_id: newAccount.id }))
+      
+      // Reset new account form and close dialog
+      setNewAccountData({ name: '', phone_number: '' })
+      setIsAddAccountOpen(false)
+      
+      toast({
+        title: "Success",
+        description: "Account created and selected successfully"
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create account",
+        variant: "destructive"
+      })
+    }
   }
 
   const openEditDialog = (transaction: any) => {
@@ -585,18 +626,29 @@ export default function Transactions() {
 
                 <div className="space-y-2">
                   <Label htmlFor="account_id">Account</Label>
-                  <Select value={formData.account_id} onValueChange={(value) => 
-                    setFormData(prev => ({ ...prev, account_id: value }))
-                  }>
+                  <Select 
+                    value={formData.account_id} 
+                    onValueChange={(value) => {
+                      if (value === 'add_new') {
+                        setIsAddAccountOpen(true)
+                      } else {
+                        setFormData(prev => ({ ...prev, account_id: value }))
+                      }
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select account" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background z-50">
                       {accounts.map((account) => (
                         <SelectItem key={account.id} value={account.id}>
                           {account.name}
                         </SelectItem>
                       ))}
+                      <SelectItem value="add_new" className="text-primary font-medium">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add New Account
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -846,6 +898,57 @@ export default function Transactions() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add New Account Dialog */}
+      <Dialog open={isAddAccountOpen} onOpenChange={setIsAddAccountOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Account</DialogTitle>
+            <DialogDescription>
+              Create a new account and it will be automatically selected for your transaction.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleNewAccount} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="account_name">Account Name *</Label>
+              <Input
+                id="account_name"
+                value={newAccountData.name}
+                onChange={(e) => setNewAccountData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter account name"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="account_phone">Phone Number</Label>
+              <Input
+                id="account_phone"
+                value={newAccountData.phone_number}
+                onChange={(e) => setNewAccountData(prev => ({ ...prev, phone_number: e.target.value }))}
+                placeholder="Enter phone number (optional)"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button type="submit" className="flex-1">
+                Create Account
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setIsAddAccountOpen(false)
+                  setNewAccountData({ name: '', phone_number: '' })
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
