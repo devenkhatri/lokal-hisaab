@@ -526,7 +526,8 @@ export default function Transactions() {
                     <Input
                       id="transaction_no"
                       value={formData.transaction_no}
-                      onChange={(e) => setFormData(prev => ({ ...prev, transaction_no: e.target.value }))}
+                      readOnly
+                      className="bg-muted"
                       placeholder="Auto-generated"
                     />
                   </div>
