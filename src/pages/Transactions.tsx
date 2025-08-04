@@ -550,70 +550,49 @@ export default function Transactions() {
                 Add Transaction
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>
-                  {editingTransaction ? 'Edit Transaction' : 'Add New Transaction'}
+                  {editingTransaction ? 'Edit Transaction' : 'Quick Transaction Entry'}
                 </DialogTitle>
                 <DialogDescription>
-                  {editingTransaction ? 'Update transaction details' : 'Create a new transaction entry'}
+                  {editingTransaction ? 'Update transaction details' : 'Press Enter to save, Tab to navigate fields'}
                 </DialogDescription>
               </DialogHeader>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="transaction_no">Transaction No</Label>
-                    <Input
-                      id="transaction_no"
-                      value={formData.transaction_no}
-                      readOnly
-                      className="bg-muted"
-                      placeholder="Auto-generated"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="date">Date</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {format(formData.date, 'dd/MM/yyyy')}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={formData.date}
-                          onSelect={(date) => date && setFormData(prev => ({ ...prev, date }))}
-                          initialFocus
-                          className={cn("p-3 pointer-events-auto")}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="amount">Amount (₹)</Label>
+              <form onSubmit={handleSubmit} className="space-y-3">
+                {/* Primary fields in grid for faster entry */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="amount" className="text-sm font-medium">Amount (₹) *</Label>
                     <Input
                       id="amount"
                       type="number"
                       step="0.01"
                       value={formData.amount}
                       onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                      placeholder="0.00"
                       required
+                      autoFocus
+                      tabIndex={1}
+                      className="h-9"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const typeButton = document.querySelector('[aria-label="Type"]') as HTMLElement
+                          typeButton?.focus()
+                        }
+                      }}
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Type</Label>
-                    <Select value={formData.type} onValueChange={(value: 'credit' | 'debit') => 
-                      setFormData(prev => ({ ...prev, type: value }))
-                    }>
-                      <SelectTrigger>
+                  <div className="space-y-1">
+                    <Label htmlFor="type" className="text-sm font-medium">Type *</Label>
+                    <Select 
+                      value={formData.type} 
+                      onValueChange={(value: 'credit' | 'debit') => setFormData(prev => ({ ...prev, type: value }))}
+                    >
+                      <SelectTrigger aria-label="Type" tabIndex={2} className="h-9">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -622,70 +601,143 @@ export default function Transactions() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="date" className="text-sm font-medium">Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start h-9" tabIndex={3}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {format(formData.date, 'MMM dd')}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={formData.date}
+                          onSelect={(date) => date && setFormData(prev => ({ ...prev, date }))}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="account_id">Account</Label>
-                  <Select 
-                    value={formData.account_id} 
-                    onValueChange={(value) => {
-                      if (value === 'add_new') {
-                        setIsAddAccountOpen(true)
-                      } else {
-                        setFormData(prev => ({ ...prev, account_id: value }))
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select account" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50">
-                      {accounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
+                {/* Account and Location in second row */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="account_id" className="text-sm font-medium">Account *</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsAddAccountOpen(true)}
+                        className="text-xs h-6 px-2"
+                        tabIndex={-1}
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add
+                      </Button>
+                    </div>
+                    <Select 
+                      value={formData.account_id} 
+                      onValueChange={(value) => {
+                        if (value === 'add_new') {
+                          setIsAddAccountOpen(true)
+                        } else {
+                          setFormData(prev => ({ ...prev, account_id: value }))
+                        }
+                      }}
+                    >
+                      <SelectTrigger tabIndex={4} className="h-9">
+                        <SelectValue placeholder="Select account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.name}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="add_new" className="text-primary font-medium">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add New Account
                         </SelectItem>
-                      ))}
-                      <SelectItem value="add_new" className="text-primary font-medium">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add New Account
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="location_id" className="text-sm font-medium">Location *</Label>
+                    <Select 
+                      value={formData.location_id} 
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, location_id: value }))}
+                    >
+                      <SelectTrigger tabIndex={5} className="h-9">
+                        <SelectValue placeholder="Select location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locations.map((location) => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {location.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="location_id">Location</Label>
-                  <Select value={formData.location_id} onValueChange={(value) => 
-                    setFormData(prev => ({ ...prev, location_id: value }))
-                  }>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations.map((location) => (
-                        <SelectItem key={location.id} value={location.id}>
-                          {location.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                {/* Description field */}
+                <div className="space-y-1">
+                  <Label htmlFor="description" className="text-sm font-medium">Description</Label>
                   <Textarea
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Transaction description"
+                    placeholder="Optional transaction description"
+                    rows={2}
+                    className="resize-none"
+                    tabIndex={6}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.ctrlKey) {
+                        e.preventDefault()
+                        handleSubmit(e as any)
+                      }
+                    }}
+                  />
+                  <div className="text-xs text-muted-foreground">Press Ctrl+Enter to save quickly</div>
+                </div>
+
+                {/* Transaction number at bottom (less important) */}
+                <div className="space-y-1">
+                  <Label htmlFor="transaction_no" className="text-xs text-muted-foreground">Transaction Number</Label>
+                  <Input
+                    id="transaction_no"
+                    value={formData.transaction_no}
+                    readOnly
+                    className="bg-muted h-8 text-sm"
+                    placeholder="Auto-generated"
+                    tabIndex={-1}
                   />
                 </div>
 
-                <div className="flex gap-3 pt-4">
-                  <Button type="submit" className="flex-1">
-                    {editingTransaction ? 'Update' : 'Create'} Transaction
+                {/* Action buttons */}
+                <div className="flex gap-2 pt-3">
+                  <Button 
+                    type="submit" 
+                    className="flex-1 h-9"
+                    tabIndex={7}
+                  >
+                    {editingTransaction ? 'Update' : 'Save'} Transaction
                   </Button>
-                  <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsFormOpen(false)}
+                    className="h-9"
+                    tabIndex={8}
+                  >
                     Cancel
                   </Button>
                 </div>
