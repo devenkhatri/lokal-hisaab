@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Filter, Download, Edit, Trash2, Eye } from 'lucide-react'
+import { Plus, Search, Filter, Download, Edit, Trash2, Eye, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -38,6 +38,10 @@ export default function Transactions() {
   const [totalPages, setTotalPages] = useState(1)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<any>(null)
+  const [isImportOpen, setIsImportOpen] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importPreview, setImportPreview] = useState<any[]>([])
+  const [importing, setImporting] = useState(false)
   const { toast } = useToast()
 
   // Form state
@@ -174,6 +178,179 @@ export default function Transactions() {
     a.click()
   }
 
+  const downloadSampleCSV = () => {
+    const sampleData = [
+      {
+        'Transaction No': 'TXN001',
+        'Date': '2025-08-04',
+        'Amount': '5000',
+        'Type': 'credit',
+        'Account Name': 'Amit Patel',
+        'Location Name': 'Mumbai Branch',
+        'Description': 'Payment received from client'
+      },
+      {
+        'Transaction No': 'TXN002',
+        'Date': '2025-08-04',
+        'Amount': '1500',
+        'Type': 'debit',
+        'Account Name': 'Neha Joshi',
+        'Location Name': 'Delhi Branch',
+        'Description': 'Office supplies purchase'
+      },
+      {
+        'Transaction No': 'TXN003',
+        'Date': '2025-08-03',
+        'Amount': '25000',
+        'Type': 'credit',
+        'Account Name': 'Rajesh Kumar',
+        'Location Name': 'Bangalore Branch',
+        'Description': 'Monthly rent payment'
+      }
+    ]
+
+    const csv = [
+      Object.keys(sampleData[0]).join(','),
+      ...sampleData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+    ].join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'sample-transactions.csv'
+    a.click()
+  }
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setImportFile(file)
+    
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      const lines = text.split('\n').filter(line => line.trim())
+      
+      if (lines.length < 2) {
+        toast({
+          title: "Error",
+          description: "CSV file must have at least a header and one data row",
+          variant: "destructive"
+        })
+        return
+      }
+
+      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
+      const expectedHeaders = ['Transaction No', 'Date', 'Amount', 'Type', 'Account Name', 'Location Name', 'Description']
+      
+      const missingHeaders = expectedHeaders.filter(h => !headers.includes(h))
+      if (missingHeaders.length > 0) {
+        toast({
+          title: "Error",
+          description: `Missing required columns: ${missingHeaders.join(', ')}`,
+          variant: "destructive"
+        })
+        return
+      }
+
+      const preview = lines.slice(1, 6).map((line, index) => {
+        const values = line.split(',').map(v => v.replace(/"/g, '').trim())
+        const row: any = {}
+        headers.forEach((header, i) => {
+          row[header] = values[i] || ''
+        })
+        row.rowIndex = index + 1
+        return row
+      })
+
+      setImportPreview(preview)
+    }
+    
+    reader.readAsText(file)
+  }
+
+  const processImport = async () => {
+    if (!importFile) return
+
+    setImporting(true)
+    try {
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        const text = e.target?.result as string
+        const lines = text.split('\n').filter(line => line.trim())
+        const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
+        
+        let successCount = 0
+        let errorCount = 0
+        
+        for (let i = 1; i < lines.length; i++) {
+          try {
+            const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim())
+            const row: any = {}
+            headers.forEach((header, index) => {
+              row[header] = values[index] || ''
+            })
+
+            // Find account and location by name
+            const account = accounts.find(a => a.name === row['Account Name'])
+            const location = locations.find(l => l.name === row['Location Name'])
+            
+            if (!account) {
+              console.error(`Account not found: ${row['Account Name']}`)
+              errorCount++
+              continue
+            }
+            
+            if (!location) {
+              console.error(`Location not found: ${row['Location Name']}`)
+              errorCount++
+              continue
+            }
+
+            const transactionData = {
+              transaction_no: row['Transaction No'] || `TXN${Date.now()}-${i}`,
+              date: row['Date'],
+              amount: parseFloat(row['Amount']),
+              type: row['Type'].toLowerCase() as 'credit' | 'debit',
+              account_id: account.id,
+              location_id: location.id,
+              description: row['Description'] || ''
+            }
+
+            await transactionsApi.create(transactionData)
+            successCount++
+          } catch (error) {
+            console.error(`Error importing row ${i}:`, error)
+            errorCount++
+          }
+        }
+
+        toast({
+          title: "Import Complete",
+          description: `Successfully imported ${successCount} transactions. ${errorCount} errors occurred.`,
+          variant: successCount > 0 ? "default" : "destructive"
+        })
+
+        setIsImportOpen(false)
+        setImportFile(null)
+        setImportPreview([])
+        loadData()
+      }
+      
+      reader.readAsText(importFile)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to import transactions",
+        variant: "destructive"
+      })
+    } finally {
+      setImporting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -188,6 +365,101 @@ export default function Transactions() {
             <Download className="w-4 h-4 mr-2" />
             Export CSV
           </Button>
+          
+          <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Upload className="w-4 h-4 mr-2" />
+                Import CSV
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>Import Transactions from CSV</DialogTitle>
+                <DialogDescription>
+                  Upload a CSV file to bulk import transactions. 
+                  <Button variant="link" className="p-0 h-auto" onClick={downloadSampleCSV}>
+                    Download sample CSV
+                  </Button> to see the required format.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="csv-file">Select CSV File</Label>
+                  <Input
+                    id="csv-file"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                    className="cursor-pointer"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Required columns: Transaction No, Date, Amount, Type, Account Name, Location Name, Description
+                  </p>
+                </div>
+
+                {importPreview.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Preview (First 5 rows)</Label>
+                    <div className="border rounded-md overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Transaction No</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Account</TableHead>
+                            <TableHead>Location</TableHead>
+                            <TableHead>Description</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {importPreview.map((row, index) => (
+                            <TableRow key={index}>
+                              <TableCell>{row['Transaction No']}</TableCell>
+                              <TableCell>{row['Date']}</TableCell>
+                              <TableCell>{row['Amount']}</TableCell>
+                              <TableCell>
+                                <Badge variant={row['Type'] === 'credit' ? 'default' : 'secondary'}>
+                                  {row['Type']}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{row['Account Name']}</TableCell>
+                              <TableCell>{row['Location Name']}</TableCell>
+                              <TableCell className="max-w-32 truncate">{row['Description']}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4">
+                  <Button 
+                    onClick={processImport} 
+                    disabled={!importFile || importing}
+                    className="flex-1"
+                  >
+                    {importing ? 'Importing...' : 'Import Transactions'}
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsImportOpen(false)
+                      setImportFile(null)
+                      setImportPreview([])
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
