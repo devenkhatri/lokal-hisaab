@@ -38,7 +38,7 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile menu button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
+      <div className="lg:hidden fixed top-2 left-2 z-50">
         <Button
           variant="outline"
           size="icon"
