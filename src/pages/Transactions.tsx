@@ -83,14 +83,46 @@ export default function Transactions() {
     loadData()
   }, [filters, currentPage])
 
+  // Generate transaction number in YYYYMMDD-SequenceNo format
+  const generateTransactionNo = async (): Promise<string> => {
+    const today = format(new Date(), 'yyyyMMdd')
+    
+    try {
+      // Get today's transactions to find the next sequence number
+      const { data: todayTransactions } = await transactionsApi.getAll({
+        date_from: format(new Date(), 'yyyy-MM-dd'),
+        date_to: format(new Date(), 'yyyy-MM-dd'),
+        limit: 1000 // Get all today's transactions
+      })
+      
+      // Find the highest sequence number for today
+      const todayTxnNos = todayTransactions
+        .map(t => t.transaction_no)
+        .filter(txnNo => txnNo.startsWith(today))
+        .map(txnNo => {
+          const parts = txnNo.split('-')
+          return parts.length > 1 ? parseInt(parts[1]) : 0
+        })
+        .filter(num => !isNaN(num))
+      
+      const nextSequence = todayTxnNos.length > 0 ? Math.max(...todayTxnNos) + 1 : 1
+      return `${today}-${nextSequence.toString().padStart(3, '0')}`
+    } catch (error) {
+      // Fallback to timestamp-based if API call fails
+      return `${today}-${Date.now().toString().slice(-3)}`
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      const transactionNo = formData.transaction_no || await generateTransactionNo()
+      
       const transactionData = {
         ...formData,
         date: format(formData.date, 'yyyy-MM-dd'),
         amount: parseCurrency(formData.amount),
-        transaction_no: formData.transaction_no || `TXN${Date.now()}`
+        transaction_no: transactionNo
       }
 
       if (editingTransaction) {
@@ -181,7 +213,7 @@ export default function Transactions() {
   const downloadSampleCSV = () => {
     const sampleData = [
       {
-        'Transaction No': 'TXN001',
+        'Transaction No': '20250804-001',
         'Date': '2025-08-04',
         'Amount': '5000',
         'Type': 'credit',
@@ -190,7 +222,7 @@ export default function Transactions() {
         'Description': 'Payment received from client'
       },
       {
-        'Transaction No': 'TXN002',
+        'Transaction No': '20250804-002',
         'Date': '2025-08-04',
         'Amount': '1500',
         'Type': 'debit',
@@ -199,7 +231,7 @@ export default function Transactions() {
         'Description': 'Office supplies purchase'
       },
       {
-        'Transaction No': 'TXN003',
+        'Transaction No': '20250803-001',
         'Date': '2025-08-03',
         'Amount': '25000',
         'Type': 'credit',
@@ -310,7 +342,7 @@ export default function Transactions() {
             }
 
             const transactionData = {
-              transaction_no: row['Transaction No'] || `TXN${Date.now()}-${i}`,
+              transaction_no: row['Transaction No'] || await generateTransactionNo(),
               date: row['Date'],
               amount: parseFloat(row['Amount']),
               type: row['Type'].toLowerCase() as 'credit' | 'debit',
