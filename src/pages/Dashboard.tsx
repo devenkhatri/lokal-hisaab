@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import {
   TrendingUp,
   TrendingDown,
@@ -14,7 +13,7 @@ import {
   BarChart3
 } from 'lucide-react'
 import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/currency'
-import { formatDate, isToday, getDateRange } from '@/lib/utils/date'
+import { formatDate, getDateRange } from '@/lib/utils/date'
 import { useAppStore } from '@/store/useAppStore'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Bar, BarChart, Pie, PieChart, Cell, XAxis, YAxis, CartesianGrid } from 'recharts'
@@ -46,7 +45,7 @@ export default function Dashboard() {
   useEffect(() => {
     // Calculate dashboard metrics
     const today = new Date().toISOString().split('T')[0]
-    const { start } = getDateRange(7)
+    getDateRange(7) // For future use
 
     // Filter transactions by location if selected
     const filteredTransactions = selectedLocationId
@@ -145,13 +144,13 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <Card className="border-success/20 bg-success/5">
+        <Card className="border-success/20 bg-success/5 min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Credits</CardTitle>
-            <TrendingUp className="h-4 w-4 text-success" />
+            <CardTitle className="text-sm font-medium truncate">Today's Credits</CardTitle>
+            <TrendingUp className="h-4 w-4 text-success flex-shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">
+            <div className="text-xl sm:text-2xl font-bold text-success truncate">
               {formatCurrency(dashboardData.todayCredits)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -160,13 +159,13 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-destructive/20 bg-destructive/5">
+        <Card className="border-destructive/20 bg-destructive/5 min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Debits</CardTitle>
-            <TrendingDown className="h-4 w-4 text-destructive" />
+            <CardTitle className="text-sm font-medium truncate">Today's Debits</CardTitle>
+            <TrendingDown className="h-4 w-4 text-destructive flex-shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">
+            <div className="text-xl sm:text-2xl font-bold text-destructive truncate">
               {formatCurrency(dashboardData.todayDebits)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -175,13 +174,13 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-primary/20 bg-primary/5">
+        <Card className="border-primary/20 bg-primary/5 min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Balance</CardTitle>
-            <IndianRupee className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-medium truncate">Net Balance</CardTitle>
+            <IndianRupee className="h-4 w-4 text-primary flex-shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${dashboardData.netBalance >= 0 ? 'text-success' : 'text-destructive'
+            <div className={`text-xl sm:text-2xl font-bold truncate ${dashboardData.netBalance >= 0 ? 'text-success' : 'text-destructive'
               }`}>
               {formatCurrency(dashboardData.netBalance)}
             </div>
@@ -208,7 +207,7 @@ export default function Dashboard() {
           <CardContent>
             <div className="w-full overflow-hidden">
               <ChartContainer config={chartConfig} className="h-64 sm:h-80 w-full">
-                <BarChart data={dashboardData.dailyData} width="100%">
+                <BarChart data={dashboardData.dailyData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
@@ -236,33 +235,35 @@ export default function Dashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="h-64 sm:h-80">
-              <PieChart>
-                <Pie
-                  data={dashboardData.accountData}
-                  dataKey="total"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                >
-                  {dashboardData.accountData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <ChartTooltip
-                  content={<ChartTooltipContent />}
-                  formatter={(value: number) => [formatCurrencyCompact(value), '']}
-                />
-              </PieChart>
-            </ChartContainer>
+            <div className="w-full overflow-hidden">
+              <ChartContainer config={chartConfig} className="h-64 sm:h-80 w-full">
+                <PieChart>
+                  <Pie
+                    data={dashboardData.accountData}
+                    dataKey="total"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={60}
+                  >
+                    {dashboardData.accountData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <ChartTooltip
+                    content={<ChartTooltipContent />}
+                    formatter={(value: number) => [formatCurrencyCompact(value), '']}
+                  />
+                </PieChart>
+              </ChartContainer>
+            </div>
 
             {/* Legend */}
             <div className="mt-4 grid grid-cols-2 gap-2">
               {dashboardData.accountData.map((item, index) => (
-                <div key={index} className="flex items-center gap-2">
+                <div key={index} className="flex items-center gap-2 min-w-0">
                   <div
-                    className="w-3 h-3 rounded-sm"
+                    className="w-3 h-3 rounded-sm flex-shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
                   <span className="text-sm text-muted-foreground truncate">
@@ -278,48 +279,48 @@ export default function Dashboard() {
       {/* Quick Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Receipt className="w-8 h-8 text-primary" />
-              <div>
-                <p className="text-2xl font-bold">156</p>
-                <p className="text-sm text-muted-foreground">Total Transactions</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Receipt className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-lg sm:text-2xl font-bold">156</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Transactions</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Users className="w-8 h-8 text-success" />
-              <div>
-                <p className="text-2xl font-bold">6</p>
-                <p className="text-sm text-muted-foreground">Active Accounts</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-success flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-lg sm:text-2xl font-bold">6</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Active Accounts</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <MapPin className="w-8 h-8 text-destructive" />
-              <div>
-                <p className="text-2xl font-bold">3</p>
-                <p className="text-sm text-muted-foreground">Business Locations</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-destructive flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-lg sm:text-2xl font-bold">3</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Business Locations</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <IndianRupee className="w-8 h-8 text-primary" />
-              <div>
-                <p className="text-2xl font-bold">{formatCurrencyCompact(1250000)}</p>
-                <p className="text-sm text-muted-foreground">Monthly Total</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <IndianRupee className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-lg sm:text-2xl font-bold truncate">{formatCurrencyCompact(1250000)}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Monthly Total</p>
               </div>
             </div>
           </CardContent>
