@@ -8,7 +8,8 @@ import {
   BarChart3, 
   LogOut,
   Menu,
-  X
+  X,
+  Calculator
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -67,11 +68,11 @@ export function Sidebar() {
           <div className="flex items-center justify-between p-6 border-b border-border">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-                <Receipt className="w-4 h-4 text-primary-foreground" />
+                <Calculator className="w-4 h-4 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-foreground">BizManager</h1>
-                <p className="text-xs text-muted-foreground">Business Accounts</p>
+                <h1 className="text-lg font-semibold text-foreground">Local Hisab</h1>
+                <p className="text-xs text-muted-foreground">Local Accounting</p>
               </div>
             </div>
           </div>

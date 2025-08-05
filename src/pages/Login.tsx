@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
 import { dummyAuth } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
-import { Receipt, Building } from 'lucide-react'
+import { Calculator, Building } from 'lucide-react'
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -36,7 +36,7 @@ export default function Login() {
         setAuthenticated(true)
         toast({
           title: "Login Successful",
-          description: "Welcome to BizManager!",
+          description: "Welcome to Local Hisab!",
         })
       } else {
         setError(result.error || 'Login failed')
@@ -56,7 +56,7 @@ export default function Login() {
           <div className="flex justify-center">
             <div className="relative">
               <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center shadow-lg">
-                <Receipt className="w-8 h-8 text-primary-foreground" />
+                <Calculator className="w-8 h-8 text-primary-foreground" />
               </div>
               <div className="absolute -top-1 -right-1 w-6 h-6 bg-success rounded-full flex items-center justify-center">
                 <Building className="w-3 h-3 text-success-foreground" />
@@ -64,8 +64,8 @@ export default function Login() {
             </div>
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">BizManager</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Business Account Management System</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Local Hisab</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Local Business Accounting System</p>
           </div>
         </div>
 
@@ -74,7 +74,7 @@ export default function Login() {
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">Welcome Back</CardTitle>
             <CardDescription className="text-center">
-              Sign in to manage your business accounts
+              Sign in to manage your local business accounts
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -132,7 +132,7 @@ export default function Login() {
 
         {/* Footer */}
         <div className="text-center text-sm text-muted-foreground">
-          <p>© 2024 BizManager. Built for Indian Business Market.</p>
+          <p>© 2024 Local Hisab. Built for Local Indian Businesses.</p>
         </div>
       </div>
     </div>
