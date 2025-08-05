@@ -3,11 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  IndianRupee, 
-  Users, 
+import {
+  TrendingUp,
+  TrendingDown,
+  IndianRupee,
+  Users,
   MapPin,
   Receipt,
   Calendar,
@@ -47,9 +47,9 @@ export default function Dashboard() {
     // Calculate dashboard metrics
     const today = new Date().toISOString().split('T')[0]
     const { start } = getDateRange(7)
-    
+
     // Filter transactions by location if selected
-    const filteredTransactions = selectedLocationId 
+    const filteredTransactions = selectedLocationId
       ? mockTransactions.filter(t => t.location_id === selectedLocationId)
       : mockTransactions
 
@@ -68,7 +68,7 @@ export default function Dashboard() {
       const date = new Date()
       date.setDate(date.getDate() - i)
       const dateStr = date.toISOString().split('T')[0]
-      
+
       const dayTransactions = filteredTransactions.filter(t => t.date === dateStr)
       const credits = dayTransactions
         .filter(t => t.type === 'credit')
@@ -76,7 +76,7 @@ export default function Dashboard() {
       const debits = dayTransactions
         .filter(t => t.type === 'debit')
         .reduce((sum, t) => sum + t.amount, 0)
-      
+
       dailyData.push({
         date: formatDate(date).split('/').slice(0, 2).join('/'),
         credits,
@@ -109,21 +109,21 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 max-w-full overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             {formatDate(new Date())} • Business overview and insights
           </p>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <Select value={selectedLocationId || 'all'} onValueChange={(value) => 
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <Select value={selectedLocationId || 'all'} onValueChange={(value) =>
             setSelectedLocationId(value === 'all' ? null : value)
           }>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Select location" />
             </SelectTrigger>
             <SelectContent>
@@ -135,8 +135,8 @@ export default function Dashboard() {
               ))}
             </SelectContent>
           </Select>
-          
-          <Badge variant="outline" className="flex items-center gap-1">
+
+          <Badge variant="outline" className="flex items-center gap-1 self-start">
             <Calendar className="w-3 h-3" />
             Today
           </Badge>
@@ -144,7 +144,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <Card className="border-success/20 bg-success/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Today's Credits</CardTitle>
@@ -181,9 +181,8 @@ export default function Dashboard() {
             <IndianRupee className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${
-              dashboardData.netBalance >= 0 ? 'text-success' : 'text-destructive'
-            }`}>
+            <div className={`text-2xl font-bold ${dashboardData.netBalance >= 0 ? 'text-success' : 'text-destructive'
+              }`}>
               {formatCurrency(dashboardData.netBalance)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -194,7 +193,7 @@ export default function Dashboard() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Daily Balance Chart */}
         <Card>
           <CardHeader>
@@ -207,19 +206,21 @@ export default function Dashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="h-80">
-              <BarChart data={dashboardData.dailyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <ChartTooltip 
-                  content={<ChartTooltipContent />}
-                  formatter={(value: number) => [formatCurrencyCompact(value), '']}
-                />
-                <Bar dataKey="credits" fill="var(--color-credits)" name="Credits" />
-                <Bar dataKey="debits" fill="var(--color-debits)" name="Debits" />
-              </BarChart>
-            </ChartContainer>
+            <div className="w-full overflow-hidden">
+              <ChartContainer config={chartConfig} className="h-64 sm:h-80 w-full">
+                <BarChart data={dashboardData.dailyData} width="100%">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <ChartTooltip
+                    content={<ChartTooltipContent />}
+                    formatter={(value: number) => [formatCurrencyCompact(value), '']}
+                  />
+                  <Bar dataKey="credits" fill="var(--color-credits)" name="Credits" />
+                  <Bar dataKey="debits" fill="var(--color-debits)" name="Debits" />
+                </BarChart>
+              </ChartContainer>
+            </div>
           </CardContent>
         </Card>
 
@@ -235,7 +236,7 @@ export default function Dashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="h-80">
+            <ChartContainer config={chartConfig} className="h-64 sm:h-80">
               <PieChart>
                 <Pie
                   data={dashboardData.accountData}
@@ -249,19 +250,19 @@ export default function Dashboard() {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <ChartTooltip 
+                <ChartTooltip
                   content={<ChartTooltipContent />}
                   formatter={(value: number) => [formatCurrencyCompact(value), '']}
                 />
               </PieChart>
             </ChartContainer>
-            
+
             {/* Legend */}
             <div className="mt-4 grid grid-cols-2 gap-2">
               {dashboardData.accountData.map((item, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-sm" 
+                  <div
+                    className="w-3 h-3 rounded-sm"
                     style={{ backgroundColor: item.color }}
                   />
                   <span className="text-sm text-muted-foreground truncate">
@@ -275,7 +276,7 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">

@@ -49,8 +49,8 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-success/5 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-success/5 flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md space-y-4 sm:space-y-6">
         {/* Logo and Title */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">
@@ -64,8 +64,8 @@ export default function Login() {
             </div>
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">BizManager</h1>
-            <p className="text-muted-foreground">Business Account Management System</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">BizManager</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Business Account Management System</p>
           </div>
         </div>
 

@@ -272,15 +272,15 @@ export default function Accounts() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Accounts</h1>
-          <p className="text-muted-foreground">Manage customer and vendor accounts</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Accounts</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage customer and vendor accounts</p>
         </div>
         
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { resetForm(); setEditingAccount(null) }}>
+            <Button onClick={() => { resetForm(); setEditingAccount(null) }} className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Add Account
             </Button>
@@ -379,18 +379,21 @@ export default function Accounts() {
                       </TableCell>
                       <TableCell>{formatDate(account.created_at)}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1 sm:gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => viewAccount(account)}
+                            className="text-xs sm:text-sm"
                           >
-                            View Details
+                            <span className="hidden sm:inline">View Details</span>
+                            <span className="sm:hidden">View</span>
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => openEditDialog(account)}
+                            className="text-xs sm:text-sm"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -398,6 +401,7 @@ export default function Accounts() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(account.id)}
+                            className="text-xs sm:text-sm"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>

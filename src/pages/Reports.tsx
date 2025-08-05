@@ -187,10 +187,10 @@ export default function Reports() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Reports</h1>
-          <p className="text-muted-foreground">Business analytics and financial reports</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Reports</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Business analytics and financial reports</p>
         </div>
       </div>
 
@@ -203,7 +203,7 @@ export default function Reports() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>Location</Label>
               <Select value={filters.location_id || 'all'} onValueChange={(value) => 
@@ -270,7 +270,7 @@ export default function Reports() {
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card className="border-success/20 bg-success/5">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -338,7 +338,7 @@ export default function Reports() {
         </CardHeader>
         <CardContent>
           {reportData.dailySummary?.length > 0 ? (
-            <ChartContainer config={chartConfig} className="h-80">
+            <ChartContainer config={chartConfig} className="h-64 sm:h-80">
               <BarChart data={reportData.dailySummary}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
@@ -355,7 +355,7 @@ export default function Reports() {
               </BarChart>
             </ChartContainer>
           ) : (
-            <div className="h-80 flex items-center justify-center text-muted-foreground">
+            <div className="h-64 sm:h-80 flex items-center justify-center text-muted-foreground">
               No data available for the selected filters
             </div>
           )}

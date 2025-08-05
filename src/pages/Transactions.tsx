@@ -436,23 +436,25 @@ export default function Transactions() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Transactions</h1>
-          <p className="text-muted-foreground">Manage all business transactions</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Transactions</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage all business transactions</p>
         </div>
         
-        <div className="flex items-center gap-3">
-          <Button onClick={exportToCSV} variant="outline" size="sm">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+          <Button onClick={exportToCSV} variant="outline" size="sm" className="flex-1 sm:flex-none">
             <Download className="w-4 h-4 mr-2" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">Export</span>
           </Button>
           
           <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
                 <Upload className="w-4 h-4 mr-2" />
-                Import CSV
+                <span className="hidden sm:inline">Import CSV</span>
+                <span className="sm:hidden">Import</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl">
@@ -545,9 +547,10 @@ export default function Transactions() {
           
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
-              <Button onClick={openAddDialog}>
+              <Button onClick={openAddDialog} className="flex-1 sm:flex-none">
                 <Plus className="w-4 h-4 mr-2" />
-                Add Transaction
+                <span className="hidden sm:inline">Add Transaction</span>
+                <span className="sm:hidden">Add</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
@@ -746,7 +749,7 @@ export default function Transactions() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             <div className="space-y-2">
               <Label>Search</Label>
               <div className="relative">

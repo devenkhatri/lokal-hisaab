@@ -101,15 +101,15 @@ export default function Locations() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Locations</h1>
-          <p className="text-muted-foreground">Manage your business locations</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Locations</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage your business locations</p>
         </div>
         
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { resetForm(); setEditingLocation(null) }}>
+            <Button onClick={() => { resetForm(); setEditingLocation(null) }} className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Add Location
             </Button>
@@ -161,7 +161,7 @@ export default function Locations() {
       </div>
 
       {/* Locations Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {loading ? (
           <div className="col-span-full flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
