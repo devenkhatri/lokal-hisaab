@@ -42,7 +42,7 @@ export default function Reports() {
       setTransactions(transactionsResult.data)
       setAccounts(accountsResult)
       setLocations(locationsResult)
-      
+
       generateReportData(transactionsResult.data)
     } catch (error) {
       toast({
@@ -62,19 +62,19 @@ export default function Reports() {
       if (!acc[date]) {
         acc[date] = { date, credits: 0, debits: 0, net: 0, count: 0, commission: 0 }
       }
-      
+
       const amount = Number(transaction.amount)
       const commission = Number(transaction.commission || 0)
       acc[date].count++
       acc[date].commission += commission
-      
+
       if (transaction.type === 'credit') {
         acc[date].credits += amount
       } else {
         acc[date].debits += amount
       }
       acc[date].net = acc[date].credits - acc[date].debits
-      
+
       return acc
     }, {})
 
@@ -82,28 +82,28 @@ export default function Reports() {
     const accountSummary = transactionData.reduce((acc: any, transaction) => {
       const accountId = transaction.account_id
       const accountName = transaction.accounts?.name || 'Unknown'
-      
+
       if (!acc[accountId]) {
-        acc[accountId] = { 
-          accountId, 
-          accountName, 
-          credits: 0, 
-          debits: 0, 
-          net: 0, 
-          count: 0 
+        acc[accountId] = {
+          accountId,
+          accountName,
+          credits: 0,
+          debits: 0,
+          net: 0,
+          count: 0
         }
       }
-      
+
       const amount = Number(transaction.amount)
       acc[accountId].count++
-      
+
       if (transaction.type === 'credit') {
         acc[accountId].credits += amount
       } else {
         acc[accountId].debits += amount
       }
       acc[accountId].net = acc[accountId].credits - acc[accountId].debits
-      
+
       return acc
     }, {})
 
@@ -111,28 +111,28 @@ export default function Reports() {
     const locationSummary = transactionData.reduce((acc: any, transaction) => {
       const locationId = transaction.location_id
       const locationName = transaction.locations?.name || 'Unknown'
-      
+
       if (!acc[locationId]) {
-        acc[locationId] = { 
-          locationId, 
-          locationName, 
-          credits: 0, 
-          debits: 0, 
-          net: 0, 
-          count: 0 
+        acc[locationId] = {
+          locationId,
+          locationName,
+          credits: 0,
+          debits: 0,
+          net: 0,
+          count: 0
         }
       }
-      
+
       const amount = Number(transaction.amount)
       acc[locationId].count++
-      
+
       if (transaction.type === 'credit') {
         acc[locationId].credits += amount
       } else {
         acc[locationId].debits += amount
       }
       acc[locationId].net = acc[locationId].credits - acc[locationId].debits
-      
+
       return acc
     }, {})
 
@@ -140,7 +140,7 @@ export default function Reports() {
     const totalCredits = transactionData
       .filter(t => t.type === 'credit')
       .reduce((sum, t) => sum + Number(t.amount), 0)
-    
+
     const totalDebits = transactionData
       .filter(t => t.type === 'debit')
       .reduce((sum, t) => sum + Number(t.amount), 0)
@@ -153,28 +153,28 @@ export default function Reports() {
       const accountId = transaction.account_id
       const accountName = transaction.accounts?.name || 'Unknown'
       const commission = Number(transaction.commission || 0)
-      
+
       if (commission > 0) {
         if (!acc[accountId]) {
-          acc[accountId] = { 
-            accountId, 
-            accountName, 
-            totalCommission: 0, 
+          acc[accountId] = {
+            accountId,
+            accountName,
+            totalCommission: 0,
             transactionCount: 0,
             avgCommission: 0
           }
         }
-        
+
         acc[accountId].totalCommission += commission
         acc[accountId].transactionCount++
         acc[accountId].avgCommission = acc[accountId].totalCommission / acc[accountId].transactionCount
       }
-      
+
       return acc
     }, {})
 
     setReportData({
-      dailySummary: Object.values(dailySummary).sort((a: any, b: any) => 
+      dailySummary: Object.values(dailySummary).sort((a: any, b: any) =>
         new Date(a.date).getTime() - new Date(b.date).getTime()
       ),
       accountSummary: Object.values(accountSummary).sort((a: any, b: any) => b.net - a.net),
@@ -231,7 +231,7 @@ export default function Reports() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>Location</Label>
-              <Select value={filters.location_id || 'all'} onValueChange={(value) => 
+              <Select value={filters.location_id || 'all'} onValueChange={(value) =>
                 setFilters(prev => ({ ...prev, location_id: value === 'all' ? undefined : value }))
               }>
                 <SelectTrigger>
@@ -250,7 +250,7 @@ export default function Reports() {
 
             <div className="space-y-2">
               <Label>Account</Label>
-              <Select value={filters.account_id || 'all'} onValueChange={(value) => 
+              <Select value={filters.account_id || 'all'} onValueChange={(value) =>
                 setFilters(prev => ({ ...prev, account_id: value === 'all' ? undefined : value }))
               }>
                 <SelectTrigger>
@@ -331,9 +331,8 @@ export default function Reports() {
                 <span className="text-primary-foreground text-sm font-bold">₹</span>
               </div>
               <div>
-                <p className={`text-2xl font-bold ${
-                  (reportData.netBalance || 0) >= 0 ? 'text-success' : 'text-destructive'
-                }`}>
+                <p className={`text-2xl font-bold ${(reportData.netBalance || 0) >= 0 ? 'text-success' : 'text-destructive'
+                  }`}>
                   {formatCurrencyCompact(reportData.netBalance || 0)}
                 </p>
                 <p className="text-sm text-muted-foreground">Net Balance</p>
@@ -380,8 +379,8 @@ export default function Reports() {
             <CardTitle>Commission Report</CardTitle>
             <CardDescription>Commission earnings for selected period</CardDescription>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => exportToCSV(reportData.commissionSummary || [], 'commission-report')}
           >
@@ -439,7 +438,7 @@ export default function Reports() {
                           {formatCurrency(account.avgCommission)}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {reportData.totalCommissions > 0 
+                          {reportData.totalCommissions > 0
                             ? `${((account.totalCommission / reportData.totalCommissions) * 100).toFixed(1)}%`
                             : '0%'
                           }
@@ -469,8 +468,8 @@ export default function Reports() {
               <CardTitle>Account-wise Summary</CardTitle>
               <CardDescription>Performance by account</CardDescription>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => exportToCSV(reportData.accountSummary || [], 'account-summary')}
             >
@@ -519,8 +518,8 @@ export default function Reports() {
               <CardTitle>Location-wise Summary</CardTitle>
               <CardDescription>Performance by location</CardDescription>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => exportToCSV(reportData.locationSummary || [], 'location-summary')}
             >
@@ -570,7 +569,7 @@ export default function Reports() {
             <CardTitle>Daily Summary Report</CardTitle>
             <CardDescription>Day-wise transaction breakdown</CardDescription>
           </div>
-          <Button 
+          <Button
             variant="outline"
             onClick={() => exportToCSV(reportData.dailySummary || [], 'daily-summary')}
           >
