@@ -61,11 +61,13 @@ export default function Reports() {
     const dailySummary = transactionData.reduce((acc: any, transaction) => {
       const date = transaction.date
       if (!acc[date]) {
-        acc[date] = { date, credits: 0, debits: 0, net: 0, count: 0 }
+        acc[date] = { date, credits: 0, debits: 0, net: 0, count: 0, commission: 0 }
       }
       
       const amount = Number(transaction.amount)
+      const commission = Number(transaction.commission || 0)
       acc[date].count++
+      acc[date].commission += commission
       
       if (transaction.type === 'credit') {
         acc[date].credits += amount
@@ -144,15 +146,45 @@ export default function Reports() {
       .filter(t => t.type === 'debit')
       .reduce((sum, t) => sum + Number(t.amount), 0)
 
+    const totalCommissions = transactionData
+      .reduce((sum, t) => sum + Number(t.commission || 0), 0)
+
+    // Commission summary by account
+    const commissionSummary = transactionData.reduce((acc: any, transaction) => {
+      const accountId = transaction.account_id
+      const accountName = transaction.accounts?.name || 'Unknown'
+      const commission = Number(transaction.commission || 0)
+      
+      if (commission > 0) {
+        if (!acc[accountId]) {
+          acc[accountId] = { 
+            accountId, 
+            accountName, 
+            totalCommission: 0, 
+            transactionCount: 0,
+            avgCommission: 0
+          }
+        }
+        
+        acc[accountId].totalCommission += commission
+        acc[accountId].transactionCount++
+        acc[accountId].avgCommission = acc[accountId].totalCommission / acc[accountId].transactionCount
+      }
+      
+      return acc
+    }, {})
+
     setReportData({
       dailySummary: Object.values(dailySummary).sort((a: any, b: any) => 
         new Date(a.date).getTime() - new Date(b.date).getTime()
       ),
       accountSummary: Object.values(accountSummary).sort((a: any, b: any) => b.net - a.net),
       locationSummary: Object.values(locationSummary).sort((a: any, b: any) => b.net - a.net),
+      commissionSummary: Object.values(commissionSummary).sort((a: any, b: any) => b.totalCommission - a.totalCommission),
       totalCredits,
       totalDebits,
       netBalance: totalCredits - totalDebits,
+      totalCommissions,
       totalTransactions: transactionData.length
     })
   }
@@ -270,7 +302,7 @@ export default function Reports() {
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
         <Card className="border-success/20 bg-success/5">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -312,6 +344,22 @@ export default function Reports() {
                   {formatCurrencyCompact(reportData.netBalance || 0)}
                 </p>
                 <p className="text-sm text-muted-foreground">Net Balance</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-orange-500/20 bg-orange-500/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-orange-500 rounded-md flex items-center justify-center">
+                <span className="text-white text-sm font-bold">%</span>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-orange-500">
+                  {formatCurrencyCompact(reportData.totalCommissions || 0)}
+                </p>
+                <p className="text-sm text-muted-foreground">Total Commission</p>
               </div>
             </div>
           </CardContent>
@@ -359,6 +407,60 @@ export default function Reports() {
               No data available for the selected filters
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Commission Report */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Commission Report</CardTitle>
+            <CardDescription>Commission earnings by account for selected period</CardDescription>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => exportToCSV(reportData.commissionSummary || [], 'commission-report')}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Account</TableHead>
+                  <TableHead>Total Commission</TableHead>
+                  <TableHead>Transactions</TableHead>
+                  <TableHead>Average Commission</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reportData.commissionSummary?.length > 0 ? (
+                  reportData.commissionSummary.map((account: any) => (
+                    <TableRow key={account.accountId}>
+                      <TableCell className="font-medium">{account.accountName}</TableCell>
+                      <TableCell className="text-orange-600 font-semibold">
+                        {formatCurrency(account.totalCommission)}
+                      </TableCell>
+                      <TableCell>{account.transactionCount}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatCurrency(account.avgCommission)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                      No commission data available for the selected period
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -489,6 +591,7 @@ export default function Reports() {
                   <TableHead>Credits</TableHead>
                   <TableHead>Debits</TableHead>
                   <TableHead>Net Balance</TableHead>
+                  <TableHead>Commission</TableHead>
                   <TableHead>Transactions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -506,6 +609,9 @@ export default function Reports() {
                       <Badge variant={day.net >= 0 ? 'default' : 'destructive'}>
                         {formatCurrency(day.net)}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-orange-600 font-semibold">
+                      {formatCurrency(day.commission)}
                     </TableCell>
                     <TableCell>{day.count}</TableCell>
                   </TableRow>

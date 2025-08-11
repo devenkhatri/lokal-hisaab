@@ -1,0 +1,3 @@
+Transaction No,Date,Amount,Type,Account Name,Location Name,Description
+20250804-006,2025-08-04,5000,credit,Test Account,Test Location,No commission column - should default to 0
+20250804-007,2025-08-04,1500,debit,Test Account,Test Location,Another transaction without commission

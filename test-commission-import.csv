@@ -1,0 +1,6 @@
+Transaction No,Date,Amount,Commission,Type,Account Name,Location Name,Description
+20250804-001,2025-08-04,5000,250,credit,Test Account,Test Location,Valid commission
+20250804-002,2025-08-04,1500,,debit,Test Account,Test Location,Empty commission should default to 0
+20250804-003,2025-08-04,2000,invalid,credit,Test Account,Test Location,Invalid commission format
+20250804-004,2025-08-04,3000,-100,debit,Test Account,Test Location,Negative commission should be rejected
+20250804-005,2025-08-04,4000,150.50,credit,Test Account,Test Location,Valid decimal commission

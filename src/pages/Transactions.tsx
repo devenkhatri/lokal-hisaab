@@ -19,6 +19,13 @@ import { formatCurrency, parseCurrency } from '@/lib/utils/currency'
 import { formatDate, formatDateForInput } from '@/lib/utils/date'
 import { cn } from '@/lib/utils'
 
+// Commission validation utility
+const COMMISSION_VALIDATION = {
+  MAX_VALUE: 999999999.99,
+  MAX_DECIMAL_PLACES: 2,
+  MIN_VALUE: 0
+} as const
+
 interface TransactionFilters {
   location_id?: string
   account_id?: string
@@ -41,9 +48,12 @@ export default function Transactions() {
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importPreview, setImportPreview] = useState<any[]>([])
+  const [importHeaders, setImportHeaders] = useState<string[]>([])
   const [importing, setImporting] = useState(false)
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false)
   const [newAccountData, setNewAccountData] = useState({ name: '', phone_number: '' })
+  const [commissionError, setCommissionError] = useState('')
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({})
   const { toast } = useToast()
 
   // Form state
@@ -51,6 +61,7 @@ export default function Transactions() {
     transaction_no: '',
     date: new Date(),
     amount: '',
+    commission: '',
     type: 'credit' as 'credit' | 'debit',
     account_id: '',
     location_id: '',
@@ -115,15 +126,74 @@ export default function Transactions() {
     }
   }
 
+  // Commission validation function
+  const validateCommission = (value: string): string => {
+    if (!value || value.trim() === '') {
+      return '' // Empty is valid (defaults to 0)
+    }
+
+    const trimmedValue = value.trim()
+
+    // Check if it's a valid number
+    const numValue = parseFloat(trimmedValue)
+    if (isNaN(numValue)) {
+      return 'Commission must be a valid number'
+    }
+
+    // Check if it's non-negative
+    if (numValue < COMMISSION_VALIDATION.MIN_VALUE) {
+      return 'Commission cannot be negative'
+    }
+
+    // Check for reasonable decimal places
+    const decimalPlaces = (trimmedValue.split('.')[1] || '').length
+    if (decimalPlaces > COMMISSION_VALIDATION.MAX_DECIMAL_PLACES) {
+      return `Commission can have at most ${COMMISSION_VALIDATION.MAX_DECIMAL_PLACES} decimal places`
+    }
+
+    // Check for reasonable maximum value (prevent extremely large values)
+    if (numValue > COMMISSION_VALIDATION.MAX_VALUE) {
+      return `Commission value is too large (maximum: ${formatCurrency(COMMISSION_VALIDATION.MAX_VALUE)})`
+    }
+
+    return ''
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Clear previous errors
+    setCommissionError('')
+    setFormErrors({})
+    
+    // Validate commission field
+    const commissionValidationError = validateCommission(formData.commission)
+    if (commissionValidationError) {
+      setCommissionError(commissionValidationError)
+      setFormErrors(prev => ({ ...prev, commission: commissionValidationError }))
+      return
+    }
+    
     try {
       const transactionNo = formData.transaction_no || await generateTransactionNo()
+      
+      // Parse and validate commission value one more time before submission
+      let commissionValue = 0
+      if (formData.commission && formData.commission.trim() !== '') {
+        commissionValue = parseCurrency(formData.commission)
+        // Final validation check
+        if (isNaN(commissionValue) || commissionValue < 0) {
+          setCommissionError('Invalid commission value')
+          setFormErrors(prev => ({ ...prev, commission: 'Invalid commission value' }))
+          return
+        }
+      }
       
       const transactionData = {
         ...formData,
         date: format(formData.date, 'yyyy-MM-dd'),
         amount: parseCurrency(formData.amount),
+        commission: commissionValue,
         transaction_no: transactionNo
       }
 
@@ -167,11 +237,14 @@ export default function Transactions() {
       transaction_no: '',
       date: new Date(),
       amount: '',
+      commission: '',
       type: 'credit',
       account_id: '',
       location_id: '',
       description: ''
     })
+    setCommissionError('')
+    setFormErrors({})
   }
 
   const openAddDialog = async () => {
@@ -228,6 +301,7 @@ export default function Transactions() {
       transaction_no: transaction.transaction_no,
       date: new Date(transaction.date),
       amount: transaction.amount.toString(),
+      commission: transaction.commission ? transaction.commission.toString() : '',
       type: transaction.type,
       account_id: transaction.account_id,
       location_id: transaction.location_id,
@@ -241,6 +315,7 @@ export default function Transactions() {
       'Transaction No': t.transaction_no,
       'Date': formatDate(t.date),
       'Amount': t.amount,
+      'Commission': t.commission || 0,
       'Type': t.type,
       'Account': t.accounts?.name,
       'Location': t.locations?.name,
@@ -266,6 +341,7 @@ export default function Transactions() {
         'Transaction No': '20250804-001',
         'Date': '2025-08-04',
         'Amount': '5000',
+        'Commission': '250',
         'Type': 'credit',
         'Account Name': 'Amit Patel',
         'Location Name': 'Mumbai Branch',
@@ -275,6 +351,7 @@ export default function Transactions() {
         'Transaction No': '20250804-002',
         'Date': '2025-08-04',
         'Amount': '1500',
+        'Commission': '0',
         'Type': 'debit',
         'Account Name': 'Neha Joshi',
         'Location Name': 'Delhi Branch',
@@ -284,10 +361,61 @@ export default function Transactions() {
         'Transaction No': '20250803-001',
         'Date': '2025-08-03',
         'Amount': '25000',
+        'Commission': '1250',
         'Type': 'credit',
         'Account Name': 'Rajesh Kumar',
         'Location Name': 'Bangalore Branch',
         'Description': 'Monthly rent payment'
+      },
+      {
+        'Transaction No': '20250803-002',
+        'Date': '2025-08-03',
+        'Amount': '3200',
+        'Commission': '160',
+        'Type': 'debit',
+        'Account Name': 'Priya Sharma',
+        'Location Name': 'Mumbai Branch',
+        'Description': 'Equipment maintenance'
+      },
+      {
+        'Transaction No': '20250802-001',
+        'Date': '2025-08-02',
+        'Amount': '15000',
+        'Commission': '750',
+        'Type': 'credit',
+        'Account Name': 'Sunita Singh',
+        'Location Name': 'Delhi Branch',
+        'Description': 'Service payment'
+      },
+      {
+        'Transaction No': '20250802-002',
+        'Date': '2025-08-02',
+        'Amount': '800',
+        'Commission': '0',
+        'Type': 'debit',
+        'Account Name': 'Vikram Gupta',
+        'Location Name': 'Bangalore Branch',
+        'Description': 'Utility bills'
+      },
+      {
+        'Transaction No': '20250801-001',
+        'Date': '2025-08-01',
+        'Amount': '12000',
+        'Commission': '600',
+        'Type': 'credit',
+        'Account Name': 'Amit Patel',
+        'Location Name': 'Mumbai Branch',
+        'Description': 'Consultation fees'
+      },
+      {
+        'Transaction No': '20250801-002',
+        'Date': '2025-08-01',
+        'Amount': '2500',
+        'Commission': '0',
+        'Type': 'debit',
+        'Account Name': 'Neha Joshi',
+        'Location Name': 'Delhi Branch',
+        'Description': 'Marketing expenses'
       }
     ]
 
@@ -325,9 +453,10 @@ export default function Transactions() {
       }
 
       const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
-      const expectedHeaders = ['Transaction No', 'Date', 'Amount', 'Type', 'Account Name', 'Location Name', 'Description']
+      const requiredHeaders = ['Transaction No', 'Date', 'Amount', 'Type', 'Account Name', 'Location Name', 'Description']
+      const optionalHeaders = ['Commission']
       
-      const missingHeaders = expectedHeaders.filter(h => !headers.includes(h))
+      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
       if (missingHeaders.length > 0) {
         toast({
           title: "Error",
@@ -347,6 +476,7 @@ export default function Transactions() {
         return row
       })
 
+      setImportHeaders(headers)
       setImportPreview(preview)
     }
     
@@ -366,6 +496,7 @@ export default function Transactions() {
         
         let successCount = 0
         let errorCount = 0
+        const errorDetails: string[] = []
         
         for (let i = 1; i < lines.length; i++) {
           try {
@@ -380,13 +511,59 @@ export default function Transactions() {
             const location = locations.find(l => l.name === row['Location Name'])
             
             if (!account) {
-              console.error(`Account not found: ${row['Account Name']}`)
+              errorDetails.push(`Row ${i}: Account not found: ${row['Account Name']}`)
               errorCount++
               continue
             }
             
             if (!location) {
-              console.error(`Location not found: ${row['Location Name']}`)
+              errorDetails.push(`Row ${i}: Location not found: ${row['Location Name']}`)
+              errorCount++
+              continue
+            }
+
+            // Validate and parse commission field with enhanced validation
+            let commission = 0
+            if (row['Commission'] && row['Commission'].trim() !== '') {
+              const commissionStr = row['Commission'].trim()
+              const commissionValue = parseFloat(commissionStr)
+              
+              // Check if it's a valid number
+              if (isNaN(commissionValue)) {
+                errorDetails.push(`Row ${i}: Invalid commission format '${commissionStr}' - must be a valid number`)
+                errorCount++
+                continue
+              }
+              
+              // Check if it's non-negative
+              if (commissionValue < COMMISSION_VALIDATION.MIN_VALUE) {
+                errorDetails.push(`Row ${i}: Commission cannot be negative: ${commissionValue}`)
+                errorCount++
+                continue
+              }
+              
+              // Check for reasonable decimal places
+              const decimalPlaces = (commissionStr.split('.')[1] || '').length
+              if (decimalPlaces > COMMISSION_VALIDATION.MAX_DECIMAL_PLACES) {
+                errorDetails.push(`Row ${i}: Commission '${commissionStr}' has too many decimal places (max ${COMMISSION_VALIDATION.MAX_DECIMAL_PLACES} allowed)`)
+                errorCount++
+                continue
+              }
+              
+              // Check for reasonable maximum value
+              if (commissionValue > COMMISSION_VALIDATION.MAX_VALUE) {
+                errorDetails.push(`Row ${i}: Commission value ${commissionValue} is too large (max ${formatCurrency(COMMISSION_VALIDATION.MAX_VALUE)})`)
+                errorCount++
+                continue
+              }
+              
+              commission = commissionValue
+            }
+
+            // Validate amount field
+            const amount = parseFloat(row['Amount'])
+            if (isNaN(amount)) {
+              errorDetails.push(`Row ${i}: Invalid amount format: ${row['Amount']}`)
               errorCount++
               continue
             }
@@ -394,7 +571,8 @@ export default function Transactions() {
             const transactionData = {
               transaction_no: row['Transaction No'] || await generateTransactionNo(),
               date: row['Date'],
-              amount: parseFloat(row['Amount']),
+              amount: amount,
+              commission: commission,
               type: row['Type'].toLowerCase() as 'credit' | 'debit',
               account_id: account.id,
               location_id: location.id,
@@ -405,19 +583,35 @@ export default function Transactions() {
             successCount++
           } catch (error) {
             console.error(`Error importing row ${i}:`, error)
+            errorDetails.push(`Row ${i}: ${error instanceof Error ? error.message : 'Unknown error'}`)
             errorCount++
+          }
+        }
+
+        let toastDescription = `Successfully imported ${successCount} transactions.`
+        if (errorCount > 0) {
+          toastDescription += ` ${errorCount} errors occurred.`
+          if (errorDetails.length > 0) {
+            console.error('Import errors:', errorDetails)
+            // Show first few errors in toast for user feedback
+            const firstErrors = errorDetails.slice(0, 3).join('; ')
+            toastDescription += ` First errors: ${firstErrors}`
+            if (errorDetails.length > 3) {
+              toastDescription += ` (and ${errorDetails.length - 3} more - check console for details)`
+            }
           }
         }
 
         toast({
           title: "Import Complete",
-          description: `Successfully imported ${successCount} transactions. ${errorCount} errors occurred.`,
+          description: toastDescription,
           variant: successCount > 0 ? "default" : "destructive"
         })
 
         setIsImportOpen(false)
         setImportFile(null)
         setImportPreview([])
+        setImportHeaders([])
         loadData()
       }
       
@@ -480,6 +674,8 @@ export default function Transactions() {
                   />
                   <p className="text-sm text-muted-foreground">
                     Required columns: Transaction No, Date, Amount, Type, Account Name, Location Name, Description
+                    <br />
+                    Optional columns: Commission (defaults to 0 if missing or empty)
                   </p>
                 </div>
 
@@ -493,6 +689,7 @@ export default function Transactions() {
                             <TableHead>Transaction No</TableHead>
                             <TableHead>Date</TableHead>
                             <TableHead>Amount</TableHead>
+                            {importHeaders.includes('Commission') && <TableHead>Commission</TableHead>}
                             <TableHead>Type</TableHead>
                             <TableHead>Account</TableHead>
                             <TableHead>Location</TableHead>
@@ -505,6 +702,9 @@ export default function Transactions() {
                               <TableCell>{row['Transaction No']}</TableCell>
                               <TableCell>{row['Date']}</TableCell>
                               <TableCell>{row['Amount']}</TableCell>
+                              {importHeaders.includes('Commission') && (
+                                <TableCell>{row['Commission'] || '0'}</TableCell>
+                              )}
                               <TableCell>
                                 <Badge variant={row['Type'] === 'credit' ? 'default' : 'secondary'}>
                                   {row['Type']}
@@ -536,6 +736,7 @@ export default function Transactions() {
                       setIsImportOpen(false)
                       setImportFile(null)
                       setImportPreview([])
+                      setImportHeaders([])
                     }}
                   >
                     Cancel
@@ -565,7 +766,7 @@ export default function Transactions() {
 
               <form onSubmit={handleSubmit} className="space-y-3">
                 {/* Primary fields in grid for faster entry */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label htmlFor="amount" className="text-sm font-medium">Amount (₹) *</Label>
                     <Input
@@ -582,20 +783,83 @@ export default function Transactions() {
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault()
-                          const typeButton = document.querySelector('[aria-label="Type"]') as HTMLElement
-                          typeButton?.focus()
+                          const commissionInput = document.getElementById('commission') as HTMLElement
+                          commissionInput?.focus()
                         }
                       }}
                     />
                   </div>
                   
                   <div className="space-y-1">
+                    <Label htmlFor="commission" className="text-sm font-medium">Commission (₹)</Label>
+                    <Input
+                      id="commission"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max={COMMISSION_VALIDATION.MAX_VALUE.toString()}
+                      value={formData.commission}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setFormData(prev => ({ ...prev, commission: value }))
+                        
+                        // Clear errors when user starts typing
+                        if (commissionError) {
+                          setCommissionError('')
+                        }
+                        if (formErrors.commission) {
+                          setFormErrors(prev => ({ ...prev, commission: '' }))
+                        }
+                      }}
+                      onBlur={(e) => {
+                        // Validate on blur for immediate feedback
+                        const value = e.target.value
+                        if (value && value.trim() !== '') {
+                          const error = validateCommission(value)
+                          if (error) {
+                            setCommissionError(error)
+                            setFormErrors(prev => ({ ...prev, commission: error }))
+                          }
+                        }
+                      }}
+                      placeholder="0.00"
+                      tabIndex={2}
+                      className={`h-9 ${commissionError || formErrors.commission ? 'border-destructive focus:border-destructive' : ''}`}
+                      onKeyDown={(e) => {
+                        // Prevent invalid characters
+                        if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
+                          e.preventDefault()
+                          return
+                        }
+                        
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const typeButton = document.querySelector('[aria-label="Type"]') as HTMLElement
+                          typeButton?.focus()
+                        }
+                      }}
+                      aria-invalid={!!(commissionError || formErrors.commission)}
+                      aria-describedby={commissionError || formErrors.commission ? "commission-error" : undefined}
+                    />
+                    {(commissionError || formErrors.commission) && (
+                      <p id="commission-error" className="text-xs text-destructive" role="alert">
+                        {commissionError || formErrors.commission}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Optional. Leave empty for zero commission.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
                     <Label htmlFor="type" className="text-sm font-medium">Type *</Label>
                     <Select 
                       value={formData.type} 
                       onValueChange={(value: 'credit' | 'debit') => setFormData(prev => ({ ...prev, type: value }))}
                     >
-                      <SelectTrigger aria-label="Type" tabIndex={2} className="h-9">
+                      <SelectTrigger aria-label="Type" tabIndex={3} className="h-9">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -609,7 +873,7 @@ export default function Transactions() {
                     <Label htmlFor="date" className="text-sm font-medium">Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start h-9" tabIndex={3}>
+                        <Button variant="outline" className="w-full justify-start h-9" tabIndex={4}>
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {format(formData.date, 'MMM dd')}
                         </Button>
@@ -648,7 +912,7 @@ export default function Transactions() {
                       value={formData.account_id} 
                       onValueChange={(value) => setFormData(prev => ({ ...prev, account_id: value }))}
                     >
-                      <SelectTrigger tabIndex={4} className="h-9">
+                      <SelectTrigger tabIndex={5} className="h-9">
                         <SelectValue placeholder="Select account" />
                       </SelectTrigger>
                       <SelectContent>
@@ -667,7 +931,7 @@ export default function Transactions() {
                       value={formData.location_id} 
                       onValueChange={(value) => setFormData(prev => ({ ...prev, location_id: value }))}
                     >
-                      <SelectTrigger tabIndex={5} className="h-9">
+                      <SelectTrigger tabIndex={6} className="h-9">
                         <SelectValue placeholder="Select location" />
                       </SelectTrigger>
                       <SelectContent>
@@ -691,7 +955,7 @@ export default function Transactions() {
                     placeholder="Optional transaction description"
                     rows={2}
                     className="resize-none"
-                    tabIndex={6}
+                    tabIndex={7}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && e.ctrlKey) {
                         e.preventDefault()
@@ -720,7 +984,7 @@ export default function Transactions() {
                   <Button 
                     type="submit" 
                     className="flex-1 h-9"
-                    tabIndex={7}
+                    tabIndex={8}
                   >
                     {editingTransaction ? 'Update' : 'Save'} Transaction
                   </Button>
@@ -729,7 +993,7 @@ export default function Transactions() {
                     variant="outline" 
                     onClick={() => setIsFormOpen(false)}
                     className="h-9"
-                    tabIndex={8}
+                    tabIndex={9}
                   >
                     Cancel
                   </Button>
@@ -865,10 +1129,11 @@ export default function Transactions() {
                     <TableHead>Transaction No</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Amount</TableHead>
+                    <TableHead className="hidden sm:table-cell">Commission</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Account</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead className="hidden md:table-cell">Account</TableHead>
+                    <TableHead className="hidden lg:table-cell">Location</TableHead>
+                    <TableHead className="hidden xl:table-cell">Description</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -884,14 +1149,19 @@ export default function Transactions() {
                           {formatCurrency(transaction.amount)}
                         </span>
                       </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <span className="text-muted-foreground">
+                          {formatCurrency(transaction.commission || 0)}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <Badge variant={transaction.type === 'credit' ? 'default' : 'destructive'}>
                           {transaction.type}
                         </Badge>
                       </TableCell>
-                      <TableCell>{transaction.accounts?.name}</TableCell>
-                      <TableCell>{transaction.locations?.name}</TableCell>
-                      <TableCell className="max-w-xs truncate">
+                      <TableCell className="hidden md:table-cell">{transaction.accounts?.name}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{transaction.locations?.name}</TableCell>
+                      <TableCell className="hidden xl:table-cell max-w-xs truncate">
                         {transaction.description}
                       </TableCell>
                       <TableCell>

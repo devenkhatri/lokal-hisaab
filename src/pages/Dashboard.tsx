@@ -15,6 +15,7 @@ import {
 import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/currency'
 import { formatDate, getDateRange } from '@/lib/utils/date'
 import { useAppStore } from '@/store/useAppStore'
+import { transactionsApi } from '@/lib/api'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Bar, BarChart, Pie, PieChart, Cell, XAxis, YAxis, CartesianGrid } from 'recharts'
 
@@ -38,67 +39,92 @@ export default function Dashboard() {
     todayCredits: 0,
     todayDebits: 0,
     netBalance: 0,
+    todayCommissions: 0,
     dailyData: [] as Array<{ date: string; credits: number; debits: number; net: number }>,
     accountData: [] as Array<{ name: string; total: number; color: string }>
   })
 
   useEffect(() => {
-    // Calculate dashboard metrics
-    const today = new Date().toISOString().split('T')[0]
-    getDateRange(7) // For future use
+    const loadDashboardData = async () => {
+      try {
+        // Get dashboard stats from API
+        const stats = await transactionsApi.getDashboardStats(selectedLocationId || undefined)
+        
+        // Get last 7 days transactions for chart
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
+        
+        const { data: recentTransactions } = await transactionsApi.getAll({
+          location_id: selectedLocationId || undefined,
+          date_from: sevenDaysAgo.toISOString().split('T')[0],
+          limit: 1000
+        })
 
-    // Filter transactions by location if selected
-    const filteredTransactions = selectedLocationId
-      ? mockTransactions.filter(t => t.location_id === selectedLocationId)
-      : mockTransactions
+        // Process daily data for chart
+        const dailyData = []
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date()
+          date.setDate(date.getDate() - i)
+          const dateStr = date.toISOString().split('T')[0]
 
-    // Today's totals
-    const todayTransactions = filteredTransactions.filter(t => t.date === today)
-    const todayCredits = todayTransactions
-      .filter(t => t.type === 'credit')
-      .reduce((sum, t) => sum + t.amount, 0)
-    const todayDebits = todayTransactions
-      .filter(t => t.type === 'debit')
-      .reduce((sum, t) => sum + t.amount, 0)
+          const dayTransactions = recentTransactions.filter(t => t.date === dateStr)
+          const credits = dayTransactions
+            .filter(t => t.type === 'credit')
+            .reduce((sum, t) => sum + Number(t.amount), 0)
+          const debits = dayTransactions
+            .filter(t => t.type === 'debit')
+            .reduce((sum, t) => sum + Number(t.amount), 0)
 
-    // Last 7 days data
-    const dailyData = []
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date()
-      date.setDate(date.getDate() - i)
-      const dateStr = date.toISOString().split('T')[0]
+          dailyData.push({
+            date: formatDate(date).split('/').slice(0, 2).join('/'),
+            credits,
+            debits,
+            net: credits - debits
+          })
+        }
 
-      const dayTransactions = filteredTransactions.filter(t => t.date === dateStr)
-      const credits = dayTransactions
-        .filter(t => t.type === 'credit')
-        .reduce((sum, t) => sum + t.amount, 0)
-      const debits = dayTransactions
-        .filter(t => t.type === 'debit')
-        .reduce((sum, t) => sum + t.amount, 0)
+        // Get account-wise data
+        const accountSummary = recentTransactions.reduce((acc: any, transaction) => {
+          const accountName = transaction.accounts?.name || 'Unknown'
+          if (!acc[accountName]) {
+            acc[accountName] = 0
+          }
+          acc[accountName] += Number(transaction.amount)
+          return acc
+        }, {})
 
-      dailyData.push({
-        date: formatDate(date).split('/').slice(0, 2).join('/'),
-        credits,
-        debits,
-        net: credits - debits
-      })
+        const accountData = Object.entries(accountSummary)
+          .sort(([,a], [,b]) => (b as number) - (a as number))
+          .slice(0, 4)
+          .map(([name, total], index) => ({
+            name,
+            total: total as number,
+            color: `hsl(var(--chart-${index + 1}))`
+          }))
+
+        setDashboardData({
+          todayCredits: stats.todayCredits,
+          todayDebits: stats.todayDebits,
+          netBalance: stats.netBalance,
+          todayCommissions: stats.todayCommissions,
+          dailyData,
+          accountData
+        })
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error)
+        // Fallback to empty state
+        setDashboardData({
+          todayCredits: 0,
+          todayDebits: 0,
+          netBalance: 0,
+          todayCommissions: 0,
+          dailyData: [],
+          accountData: []
+        })
+      }
     }
 
-    // Account-wise data (mock)
-    const accountData = [
-      { name: 'Rajesh Kumar', total: 45000, color: 'hsl(var(--chart-1))' },
-      { name: 'Priya Sharma', total: 32000, color: 'hsl(var(--chart-2))' },
-      { name: 'Amit Patel', total: 28000, color: 'hsl(var(--chart-3))' },
-      { name: 'Others', total: 15000, color: 'hsl(var(--chart-4))' },
-    ]
-
-    setDashboardData({
-      todayCredits,
-      todayDebits,
-      netBalance: todayCredits - todayDebits,
-      dailyData,
-      accountData
-    })
+    loadDashboardData()
   }, [selectedLocationId])
 
   const chartConfig = {
@@ -143,7 +169,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card className="border-success/20 bg-success/5 min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium truncate">Today's Credits</CardTitle>
@@ -186,6 +212,21 @@ export default function Dashboard() {
             </div>
             <p className="text-xs text-muted-foreground">
               Credits minus debits today
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-orange-500/20 bg-orange-500/5 min-w-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium truncate">Today's Commission</CardTitle>
+            <Receipt className="h-4 w-4 text-orange-500 flex-shrink-0" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl sm:text-2xl font-bold text-orange-500 truncate">
+              {formatCurrency(dashboardData.todayCommissions)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Total commission earned today
             </p>
           </CardContent>
         </Card>

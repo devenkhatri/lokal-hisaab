@@ -6,6 +6,8 @@ type Transaction = Database['public']['Tables']['transactions']['Row'] & {
   locations?: Database['public']['Tables']['locations']['Row']
 }
 
+// Transaction type includes commission field from database schema
+
 type Account = Database['public']['Tables']['accounts']['Row']
 type Location = Database['public']['Tables']['locations']['Row']
 
@@ -82,9 +84,15 @@ export const transactionsApi = {
 
   // Create transaction
   create: async (transaction: Omit<Transaction, 'id' | 'created_at' | 'updated_at'>) => {
+    // Ensure commission defaults to 0 if not provided
+    const transactionWithDefaults = {
+      ...transaction,
+      commission: transaction.commission ?? 0
+    }
+
     const { data, error } = await supabase
       .from('transactions')
-      .insert([transaction])
+      .insert([transactionWithDefaults])
       .select()
       .single()
 
@@ -94,9 +102,20 @@ export const transactionsApi = {
 
   // Update transaction
   update: async (id: string, transaction: Partial<Transaction>) => {
+    // Prepare update data with commission handling
+    const updateData = {
+      ...transaction,
+      updated_at: new Date().toISOString()
+    }
+
+    // Ensure commission is properly handled if provided
+    if (transaction.commission !== undefined) {
+      updateData.commission = transaction.commission ?? 0
+    }
+
     const { data, error } = await supabase
       .from('transactions')
-      .update({ ...transaction, updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single()
@@ -137,10 +156,58 @@ export const transactionsApi = {
       .filter(t => t.type === 'debit')  
       .reduce((sum, t) => sum + Number(t.amount), 0)
 
+    const todayCommissions = todayTransactions
+      .reduce((sum, t) => sum + Number(t.commission || 0), 0)
+
+    // Calculate total commission for the period
+    const totalCommissions = data
+      ?.reduce((sum, t) => sum + Number(t.commission || 0), 0) || 0
+
     return {
       todayCredits,
       todayDebits,
       netBalance: todayCredits - todayDebits,
+      totalTransactions: data?.length || 0,
+      todayCommissions,
+      totalCommissions
+    }
+  },
+
+  // Get commission stats for a specific period
+  getCommissionStats: async (params?: {
+    location_id?: string
+    account_id?: string
+    date_from?: string
+    date_to?: string
+  }) => {
+    let query = supabase.from('transactions').select('*')
+    
+    if (params?.location_id) {
+      query = query.eq('location_id', params.location_id)
+    }
+    if (params?.account_id) {
+      query = query.eq('account_id', params.account_id)
+    }
+    if (params?.date_from) {
+      query = query.gte('date', params.date_from)
+    }
+    if (params?.date_to) {
+      query = query.lte('date', params.date_to)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+
+    const totalCommissions = data?.reduce((sum, t) => sum + Number(t.commission || 0), 0) || 0
+    const commissionTransactions = data?.filter(t => Number(t.commission || 0) > 0) || []
+    const avgCommission = commissionTransactions.length > 0 
+      ? totalCommissions / commissionTransactions.length 
+      : 0
+
+    return {
+      totalCommissions,
+      commissionTransactions: commissionTransactions.length,
+      avgCommission,
       totalTransactions: data?.length || 0
     }
   }
