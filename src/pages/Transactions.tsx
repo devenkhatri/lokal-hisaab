@@ -111,18 +111,60 @@ export default function Transactions() {
       // Find the highest sequence number for today
       const todayTxnNos = todayTransactions
         .map(t => t.transaction_no)
-        .filter(txnNo => txnNo.startsWith(today))
+        .filter(txnNo => txnNo && txnNo.startsWith(today)) // Ensure txnNo exists
         .map(txnNo => {
           const parts = txnNo.split('-')
-          return parts.length > 1 ? parseInt(parts[1]) : 0
+          if (parts.length > 1) {
+            const sequenceNum = parseInt(parts[1])
+            return isNaN(sequenceNum) ? 0 : sequenceNum
+          }
+          return 0
         })
-        .filter(num => !isNaN(num))
+        .filter(num => num > 0) // Only include valid positive sequence numbers
       
-      const nextSequence = todayTxnNos.length > 0 ? Math.max(...todayTxnNos) + 1 : 1
-      return `${today}-${nextSequence.toString().padStart(3, '0')}`
+      // Calculate next sequence number
+      let nextSequence = 1
+      if (todayTxnNos.length > 0) {
+        nextSequence = Math.max(...todayTxnNos) + 1
+      }
+      
+      // Generate the transaction number
+      let transactionNo = `${today}-${nextSequence.toString().padStart(3, '0')}`
+      
+      // Double-check for uniqueness by verifying it doesn't exist
+      // This is a safety measure in case of race conditions
+      let attempts = 0
+      const maxAttempts = 10
+      
+      while (attempts < maxAttempts) {
+        const { data: existingTransactions } = await transactionsApi.getAll({
+          search: transactionNo,
+          limit: 1
+        })
+        
+        // If no transaction found with this number, it's safe to use
+        if (existingTransactions.length === 0) {
+          break
+        }
+        
+        // If transaction exists, increment and try again
+        nextSequence++
+        transactionNo = `${today}-${nextSequence.toString().padStart(3, '0')}`
+        attempts++
+      }
+      
+      if (attempts >= maxAttempts) {
+        // If we couldn't find a unique number after max attempts, use timestamp
+        const timestamp = Date.now().toString().slice(-6)
+        transactionNo = `${today}-${timestamp}`
+      }
+      
+      return transactionNo
     } catch (error) {
+      console.error('Error generating transaction number:', error)
       // Fallback to timestamp-based if API call fails
-      return `${today}-${Date.now().toString().slice(-3)}`
+      const timestamp = Date.now().toString().slice(-6)
+      return `${today}-${timestamp}`
     }
   }
 
