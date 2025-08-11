@@ -51,6 +51,7 @@ export default function Transactions() {
     transaction_no: '',
     date: new Date(),
     amount: '',
+    commission: '',
     type: 'credit' as 'credit' | 'debit',
     account_id: '',
     location_id: '',
@@ -119,12 +120,25 @@ export default function Transactions() {
     e.preventDefault()
     try {
       const transactionNo = formData.transaction_no || await generateTransactionNo()
-      
+      const commission = parseCurrency(formData.commission)
+      if (commission < 0) {
+        toast({
+          title: "Invalid commission",
+          description: "Commission cannot be negative",
+          variant: "destructive",
+        })
+        return
+      }
+
       const transactionData = {
-        ...formData,
+        transaction_no: transactionNo,
         date: format(formData.date, 'yyyy-MM-dd'),
         amount: parseCurrency(formData.amount),
-        transaction_no: transactionNo
+        commission,
+        type: formData.type,
+        account_id: formData.account_id,
+        location_id: formData.location_id,
+        description: formData.description,
       }
 
       if (editingTransaction) {
@@ -167,6 +181,7 @@ export default function Transactions() {
       transaction_no: '',
       date: new Date(),
       amount: '',
+      commission: '',
       type: 'credit',
       account_id: '',
       location_id: '',
@@ -228,6 +243,7 @@ export default function Transactions() {
       transaction_no: transaction.transaction_no,
       date: new Date(transaction.date),
       amount: transaction.amount.toString(),
+      commission: (transaction.commission ?? 0).toString(),
       type: transaction.type,
       account_id: transaction.account_id,
       location_id: transaction.location_id,
@@ -241,6 +257,7 @@ export default function Transactions() {
       'Transaction No': t.transaction_no,
       'Date': formatDate(t.date),
       'Amount': t.amount,
+      'Commission': t.commission || 0,
       'Type': t.type,
       'Account': t.accounts?.name,
       'Location': t.locations?.name,
@@ -266,6 +283,7 @@ export default function Transactions() {
         'Transaction No': '20250804-001',
         'Date': '2025-08-04',
         'Amount': '5000',
+        'Commission': '500',
         'Type': 'credit',
         'Account Name': 'Amit Patel',
         'Location Name': 'Mumbai Branch',
@@ -275,6 +293,7 @@ export default function Transactions() {
         'Transaction No': '20250804-002',
         'Date': '2025-08-04',
         'Amount': '1500',
+        'Commission': '0',
         'Type': 'debit',
         'Account Name': 'Neha Joshi',
         'Location Name': 'Delhi Branch',
@@ -284,6 +303,7 @@ export default function Transactions() {
         'Transaction No': '20250803-001',
         'Date': '2025-08-03',
         'Amount': '25000',
+        'Commission': '2500',
         'Type': 'credit',
         'Account Name': 'Rajesh Kumar',
         'Location Name': 'Bangalore Branch',
@@ -325,7 +345,7 @@ export default function Transactions() {
       }
 
       const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
-      const expectedHeaders = ['Transaction No', 'Date', 'Amount', 'Type', 'Account Name', 'Location Name', 'Description']
+      const expectedHeaders = ['Transaction No', 'Date', 'Amount', 'Commission', 'Type', 'Account Name', 'Location Name', 'Description']
       
       const missingHeaders = expectedHeaders.filter(h => !headers.includes(h))
       if (missingHeaders.length > 0) {
@@ -391,10 +411,18 @@ export default function Transactions() {
               continue
             }
 
+            const commissionValue = row['Commission'] ? parseFloat(row['Commission']) : 0
+            if (isNaN(commissionValue) || commissionValue < 0) {
+              console.error(`Invalid commission value: ${row['Commission']}`)
+              errorCount++
+              continue
+            }
+
             const transactionData = {
               transaction_no: row['Transaction No'] || await generateTransactionNo(),
               date: row['Date'],
               amount: parseFloat(row['Amount']),
+              commission: commissionValue,
               type: row['Type'].toLowerCase() as 'credit' | 'debit',
               account_id: account.id,
               location_id: location.id,
@@ -479,7 +507,7 @@ export default function Transactions() {
                     className="cursor-pointer"
                   />
                   <p className="text-sm text-muted-foreground">
-                    Required columns: Transaction No, Date, Amount, Type, Account Name, Location Name, Description
+                    Required columns: Transaction No, Date, Amount, Commission, Type, Account Name, Location Name, Description
                   </p>
                 </div>
 
@@ -493,6 +521,7 @@ export default function Transactions() {
                             <TableHead>Transaction No</TableHead>
                             <TableHead>Date</TableHead>
                             <TableHead>Amount</TableHead>
+                            <TableHead>Commission</TableHead>
                             <TableHead>Type</TableHead>
                             <TableHead>Account</TableHead>
                             <TableHead>Location</TableHead>
@@ -505,6 +534,7 @@ export default function Transactions() {
                               <TableCell>{row['Transaction No']}</TableCell>
                               <TableCell>{row['Date']}</TableCell>
                               <TableCell>{row['Amount']}</TableCell>
+                              <TableCell>{row['Commission']}</TableCell>
                               <TableCell>
                                 <Badge variant={row['Type'] === 'credit' ? 'default' : 'secondary'}>
                                   {row['Type']}
@@ -565,7 +595,7 @@ export default function Transactions() {
 
               <form onSubmit={handleSubmit} className="space-y-3">
                 {/* Primary fields in grid for faster entry */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-4 gap-3">
                   <div className="space-y-1">
                     <Label htmlFor="amount" className="text-sm font-medium">Amount (₹) *</Label>
                     <Input
@@ -582,20 +612,41 @@ export default function Transactions() {
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault()
+                          const commissionInput = document.getElementById('commission') as HTMLElement
+                          commissionInput?.focus()
+                        }
+                      }}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="commission" className="text-sm font-medium">Commission (₹)</Label>
+                    <Input
+                      id="commission"
+                      type="number"
+                      step="0.01"
+                      value={formData.commission}
+                      onChange={(e) => setFormData(prev => ({ ...prev, commission: e.target.value }))}
+                      placeholder="0.00"
+                      tabIndex={2}
+                      className="h-9"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
                           const typeButton = document.querySelector('[aria-label="Type"]') as HTMLElement
                           typeButton?.focus()
                         }
                       }}
                     />
                   </div>
-                  
+
                   <div className="space-y-1">
                     <Label htmlFor="type" className="text-sm font-medium">Type *</Label>
-                    <Select 
-                      value={formData.type} 
+                    <Select
+                      value={formData.type}
                       onValueChange={(value: 'credit' | 'debit') => setFormData(prev => ({ ...prev, type: value }))}
                     >
-                      <SelectTrigger aria-label="Type" tabIndex={2} className="h-9">
+                      <SelectTrigger aria-label="Type" tabIndex={3} className="h-9">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -609,7 +660,7 @@ export default function Transactions() {
                     <Label htmlFor="date" className="text-sm font-medium">Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start h-9" tabIndex={3}>
+                        <Button variant="outline" className="w-full justify-start h-9" tabIndex={4}>
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {format(formData.date, 'MMM dd')}
                         </Button>
@@ -648,7 +699,7 @@ export default function Transactions() {
                       value={formData.account_id} 
                       onValueChange={(value) => setFormData(prev => ({ ...prev, account_id: value }))}
                     >
-                      <SelectTrigger tabIndex={4} className="h-9">
+                      <SelectTrigger tabIndex={5} className="h-9">
                         <SelectValue placeholder="Select account" />
                       </SelectTrigger>
                       <SelectContent>
@@ -667,7 +718,7 @@ export default function Transactions() {
                       value={formData.location_id} 
                       onValueChange={(value) => setFormData(prev => ({ ...prev, location_id: value }))}
                     >
-                      <SelectTrigger tabIndex={5} className="h-9">
+                      <SelectTrigger tabIndex={6} className="h-9">
                         <SelectValue placeholder="Select location" />
                       </SelectTrigger>
                       <SelectContent>
@@ -691,7 +742,7 @@ export default function Transactions() {
                     placeholder="Optional transaction description"
                     rows={2}
                     className="resize-none"
-                    tabIndex={6}
+                    tabIndex={7}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && e.ctrlKey) {
                         e.preventDefault()
@@ -720,7 +771,7 @@ export default function Transactions() {
                   <Button 
                     type="submit" 
                     className="flex-1 h-9"
-                    tabIndex={7}
+                    tabIndex={8}
                   >
                     {editingTransaction ? 'Update' : 'Save'} Transaction
                   </Button>
@@ -729,7 +780,7 @@ export default function Transactions() {
                     variant="outline" 
                     onClick={() => setIsFormOpen(false)}
                     className="h-9"
-                    tabIndex={8}
+                    tabIndex={9}
                   >
                     Cancel
                   </Button>
@@ -865,6 +916,7 @@ export default function Transactions() {
                     <TableHead>Transaction No</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Amount</TableHead>
+                    <TableHead>Commission</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Account</TableHead>
                     <TableHead>Location</TableHead>
@@ -884,6 +936,7 @@ export default function Transactions() {
                           {formatCurrency(transaction.amount)}
                         </span>
                       </TableCell>
+                      <TableCell>{formatCurrency(transaction.commission || 0)}</TableCell>
                       <TableCell>
                         <Badge variant={transaction.type === 'credit' ? 'default' : 'destructive'}>
                           {transaction.type}

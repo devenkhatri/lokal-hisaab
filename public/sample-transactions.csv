@@ -1,9 +1,9 @@
-Transaction No,Date,Amount,Type,Account Name,Location Name,Description
-"20250804-001","2025-08-04","5000","credit","Amit Patel","Mumbai Branch","Payment received from client"
-"20250804-002","2025-08-04","1500","debit","Neha Joshi","Delhi Branch","Office supplies purchase"
-"20250803-001","2025-08-03","25000","credit","Rajesh Kumar","Bangalore Branch","Monthly rent payment"
-"20250803-002","2025-08-03","3200","debit","Priya Sharma","Mumbai Branch","Equipment maintenance"
-"20250802-001","2025-08-02","15000","credit","Sunita Singh","Delhi Branch","Service payment"
-"20250802-002","2025-08-02","800","debit","Vikram Gupta","Bangalore Branch","Utility bills"
-"20250801-001","2025-08-01","12000","credit","Amit Patel","Mumbai Branch","Consultation fees"
-"20250801-002","2025-08-01","2500","debit","Neha Joshi","Delhi Branch","Marketing expenses"
+Transaction No,Date,Amount,Commission,Type,Account Name,Location Name,Description
+"20250804-001","2025-08-04","5000","500","credit","Amit Patel","Mumbai Branch","Payment received from client"
+"20250804-002","2025-08-04","1500","0","debit","Neha Joshi","Delhi Branch","Office supplies purchase"
+"20250803-001","2025-08-03","25000","2500","credit","Rajesh Kumar","Bangalore Branch","Monthly rent payment"
+"20250803-002","2025-08-03","3200","0","debit","Priya Sharma","Mumbai Branch","Equipment maintenance"
+"20250802-001","2025-08-02","15000","1500","credit","Sunita Singh","Delhi Branch","Service payment"
+"20250802-002","2025-08-02","800","0","debit","Vikram Gupta","Bangalore Branch","Utility bills"
+"20250801-001","2025-08-01","12000","1200","credit","Amit Patel","Mumbai Branch","Consultation fees"
+"20250801-002","2025-08-01","2500","0","debit","Neha Joshi","Delhi Branch","Marketing expenses"

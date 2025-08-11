@@ -28,6 +28,7 @@ export interface Transaction {
   transaction_no: string
   date: string
   amount: number
+  commission: number
   type: 'credit' | 'debit'
   account_id: string
   location_id: string
