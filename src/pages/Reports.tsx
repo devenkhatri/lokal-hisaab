@@ -7,12 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { Bar, BarChart, XAxis, YAxis, CartesianGrid } from 'recharts'
+
 import { useToast } from '@/hooks/use-toast'
 import { transactionsApi, accountsApi, locationsApi } from '@/lib/api'
 import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/currency'
-import { formatDate, getDateRange } from '@/lib/utils/date'
+import { formatDate } from '@/lib/utils/date'
 import { format } from 'date-fns'
 
 interface ReportFilters {
@@ -210,12 +209,6 @@ export default function Reports() {
     a.click()
   }
 
-  const chartConfig = {
-    credits: { label: 'Credits', color: 'hsl(var(--success))' },
-    debits: { label: 'Debits', color: 'hsl(var(--destructive))' },
-    net: { label: 'Net Balance', color: 'hsl(var(--primary))' }
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -378,44 +371,14 @@ export default function Reports() {
         </Card>
       </div>
 
-      {/* Daily Balance Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daily Balance Trend</CardTitle>
-          <CardDescription>Credits vs Debits by date</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {reportData.dailySummary?.length > 0 ? (
-            <ChartContainer config={chartConfig} className="h-64 sm:h-80">
-              <BarChart data={reportData.dailySummary}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
-                  tickFormatter={(value) => formatDate(value).split('/').slice(0, 2).join('/')}
-                />
-                <YAxis tickFormatter={(value) => formatCurrencyCompact(value)} />
-                <ChartTooltip 
-                  content={<ChartTooltipContent />}
-                  formatter={(value: number) => [formatCurrencyCompact(value), '']}
-                />
-                <Bar dataKey="credits" fill="var(--color-credits)" name="Credits" />
-                <Bar dataKey="debits" fill="var(--color-debits)" name="Debits" />
-              </BarChart>
-            </ChartContainer>
-          ) : (
-            <div className="h-64 sm:h-80 flex items-center justify-center text-muted-foreground">
-              No data available for the selected filters
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
 
       {/* Commission Report */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Commission Report</CardTitle>
-            <CardDescription>Commission earnings by account for selected period</CardDescription>
+            <CardDescription>Commission earnings for selected period</CardDescription>
           </div>
           <Button 
             variant="outline" 
@@ -426,40 +389,73 @@ export default function Reports() {
             Export
           </Button>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Account</TableHead>
-                  <TableHead>Total Commission</TableHead>
-                  <TableHead>Transactions</TableHead>
-                  <TableHead>Average Commission</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reportData.commissionSummary?.length > 0 ? (
-                  reportData.commissionSummary.map((account: any) => (
-                    <TableRow key={account.accountId}>
-                      <TableCell className="font-medium">{account.accountName}</TableCell>
-                      <TableCell className="text-orange-600 font-semibold">
-                        {formatCurrency(account.totalCommission)}
-                      </TableCell>
-                      <TableCell>{account.transactionCount}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatCurrency(account.avgCommission)}
+        <CardContent className="space-y-6">
+          {/* Overall Commission Summary */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-orange-600">
+                {formatCurrency(reportData.totalCommissions || 0)}
+              </p>
+              <p className="text-sm text-muted-foreground">Total Commission</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-orange-600">
+                {reportData.commissionSummary?.length || 0}
+              </p>
+              <p className="text-sm text-muted-foreground">Accounts with Commission</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-orange-600">
+                {reportData.commissionSummary?.reduce((sum: number, acc: any) => sum + acc.transactionCount, 0) || 0}
+              </p>
+              <p className="text-sm text-muted-foreground">Commission Transactions</p>
+            </div>
+          </div>
+
+          {/* Account-wise Commission Table */}
+          <div>
+            <h4 className="text-lg font-semibold mb-3">Account-wise Commission Breakdown</h4>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Account</TableHead>
+                    <TableHead>Total Commission</TableHead>
+                    <TableHead>Transactions</TableHead>
+                    <TableHead>Average Commission</TableHead>
+                    <TableHead>% of Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {reportData.commissionSummary?.length > 0 ? (
+                    reportData.commissionSummary.map((account: any) => (
+                      <TableRow key={account.accountId}>
+                        <TableCell className="font-medium">{account.accountName}</TableCell>
+                        <TableCell className="text-orange-600 font-semibold">
+                          {formatCurrency(account.totalCommission)}
+                        </TableCell>
+                        <TableCell>{account.transactionCount}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatCurrency(account.avgCommission)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {reportData.totalCommissions > 0 
+                            ? `${((account.totalCommission / reportData.totalCommissions) * 100).toFixed(1)}%`
+                            : '0%'
+                          }
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                        No commission data available for the selected period
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                      No commission data available for the selected period
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

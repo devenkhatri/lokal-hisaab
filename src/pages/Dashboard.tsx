@@ -9,29 +9,16 @@ import {
   Users,
   MapPin,
   Receipt,
-  Calendar,
-  BarChart3
+  Calendar
 } from 'lucide-react'
 import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/currency'
 import { formatDate, getDateRange } from '@/lib/utils/date'
 import { useAppStore } from '@/store/useAppStore'
-import { transactionsApi } from '@/lib/api'
+import { transactionsApi, accountsApi, locationsApi } from '@/lib/api'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { Bar, BarChart, Pie, PieChart, Cell, XAxis, YAxis, CartesianGrid } from 'recharts'
+import { Pie, PieChart, Cell } from 'recharts'
 
-// Mock data - replace with actual API calls
-const mockTransactions = [
-  { id: '1', date: '2024-01-20', amount: 15000, type: 'credit', account_id: '1', location_id: '1' },
-  { id: '2', date: '2024-01-20', amount: 8000, type: 'debit', account_id: '2', location_id: '1' },
-  { id: '3', date: '2024-01-19', amount: 25000, type: 'credit', account_id: '3', location_id: '2' },
-  { id: '4', date: '2024-01-19', amount: 12000, type: 'debit', account_id: '1', location_id: '2' },
-]
 
-const mockLocations = [
-  { id: '1', name: 'Mumbai Branch', address: 'Andheri East, Mumbai' },
-  { id: '2', name: 'Delhi Branch', address: 'Connaught Place, New Delhi' },
-  { id: '3', name: 'Bangalore Branch', address: 'Koramangala, Bangalore' },
-]
 
 export default function Dashboard() {
   const { selectedLocationId, setSelectedLocationId } = useAppStore()
@@ -40,15 +27,24 @@ export default function Dashboard() {
     todayDebits: 0,
     netBalance: 0,
     todayCommissions: 0,
-    dailyData: [] as Array<{ date: string; credits: number; debits: number; net: number }>,
+    totalTransactions: 0,
+    activeAccounts: 0,
+    totalLocations: 0,
+    monthlyTotal: 0,
+
     accountData: [] as Array<{ name: string; total: number; color: string }>
   })
+  const [locations, setLocations] = useState<any[]>([])
 
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        // Get dashboard stats from API
-        const stats = await transactionsApi.getDashboardStats(selectedLocationId || undefined)
+        // Load all required data in parallel
+        const [stats, locationsData, accountsData] = await Promise.all([
+          transactionsApi.getDashboardStats(selectedLocationId || undefined),
+          locationsApi.getAll(),
+          accountsApi.getAll()
+        ])
         
         // Get last 7 days transactions for chart
         const sevenDaysAgo = new Date()
@@ -60,28 +56,21 @@ export default function Dashboard() {
           limit: 1000
         })
 
-        // Process daily data for chart
-        const dailyData = []
-        for (let i = 6; i >= 0; i--) {
-          const date = new Date()
-          date.setDate(date.getDate() - i)
-          const dateStr = date.toISOString().split('T')[0]
+        // Get monthly transactions for monthly total
+        const firstDayOfMonth = new Date()
+        firstDayOfMonth.setDate(1)
+        
+        const { data: monthlyTransactions } = await transactionsApi.getAll({
+          location_id: selectedLocationId || undefined,
+          date_from: firstDayOfMonth.toISOString().split('T')[0],
+          limit: 1000
+        })
 
-          const dayTransactions = recentTransactions.filter(t => t.date === dateStr)
-          const credits = dayTransactions
-            .filter(t => t.type === 'credit')
-            .reduce((sum, t) => sum + Number(t.amount), 0)
-          const debits = dayTransactions
-            .filter(t => t.type === 'debit')
-            .reduce((sum, t) => sum + Number(t.amount), 0)
+        const monthlyTotal = monthlyTransactions.reduce((sum, t) => {
+          return sum + (t.type === 'credit' ? Number(t.amount) : -Number(t.amount))
+        }, 0)
 
-          dailyData.push({
-            date: formatDate(date).split('/').slice(0, 2).join('/'),
-            credits,
-            debits,
-            net: credits - debits
-          })
-        }
+
 
         // Get account-wise data
         const accountSummary = recentTransactions.reduce((acc: any, transaction) => {
@@ -102,12 +91,19 @@ export default function Dashboard() {
             color: `hsl(var(--chart-${index + 1}))`
           }))
 
+        // Count unique accounts that have transactions
+        const uniqueAccounts = new Set(recentTransactions.map(t => t.account_id))
+
+        setLocations(locationsData)
         setDashboardData({
           todayCredits: stats.todayCredits,
           todayDebits: stats.todayDebits,
           netBalance: stats.netBalance,
           todayCommissions: stats.todayCommissions,
-          dailyData,
+          totalTransactions: stats.totalTransactions,
+          activeAccounts: uniqueAccounts.size,
+          totalLocations: locationsData.length,
+          monthlyTotal,
           accountData
         })
       } catch (error) {
@@ -118,7 +114,10 @@ export default function Dashboard() {
           todayDebits: 0,
           netBalance: 0,
           todayCommissions: 0,
-          dailyData: [],
+          totalTransactions: 0,
+          activeAccounts: 0,
+          totalLocations: 0,
+          monthlyTotal: 0,
           accountData: []
         })
       }
@@ -153,7 +152,7 @@ export default function Dashboard() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Locations</SelectItem>
-              {mockLocations.map((location) => (
+              {locations.map((location) => (
                 <SelectItem key={location.id} value={location.id}>
                   {location.name}
                 </SelectItem>
@@ -233,37 +232,7 @@ export default function Dashboard() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Daily Balance Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="w-5 h-5" />
-              Daily Balance Trend
-            </CardTitle>
-            <CardDescription>
-              Last 7 days credits vs debits
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="w-full overflow-hidden">
-              <ChartContainer config={chartConfig} className="h-64 sm:h-80 w-full">
-                <BarChart data={dashboardData.dailyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <ChartTooltip
-                    content={<ChartTooltipContent />}
-                    formatter={(value: number) => [formatCurrencyCompact(value), '']}
-                  />
-                  <Bar dataKey="credits" fill="var(--color-credits)" name="Credits" />
-                  <Bar dataKey="debits" fill="var(--color-debits)" name="Debits" />
-                </BarChart>
-              </ChartContainer>
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 gap-4 sm:gap-6">
         {/* Account-wise Distribution */}
         <Card>
           <CardHeader>
@@ -324,7 +293,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 sm:gap-3">
               <Receipt className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-lg sm:text-2xl font-bold">156</p>
+                <p className="text-lg sm:text-2xl font-bold">{dashboardData.totalTransactions}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">Total Transactions</p>
               </div>
             </div>
@@ -336,7 +305,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 sm:gap-3">
               <Users className="w-6 h-6 sm:w-8 sm:h-8 text-success flex-shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-lg sm:text-2xl font-bold">6</p>
+                <p className="text-lg sm:text-2xl font-bold">{dashboardData.activeAccounts}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">Active Accounts</p>
               </div>
             </div>
@@ -348,7 +317,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 sm:gap-3">
               <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-destructive flex-shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-lg sm:text-2xl font-bold">3</p>
+                <p className="text-lg sm:text-2xl font-bold">{dashboardData.totalLocations}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">Business Locations</p>
               </div>
             </div>
@@ -360,7 +329,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 sm:gap-3">
               <IndianRupee className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-lg sm:text-2xl font-bold truncate">{formatCurrencyCompact(1250000)}</p>
+                <p className="text-lg sm:text-2xl font-bold truncate">{formatCurrencyCompact(dashboardData.monthlyTotal)}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">Monthly Total</p>
               </div>
             </div>
