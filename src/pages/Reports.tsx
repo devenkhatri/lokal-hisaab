@@ -304,6 +304,9 @@ export default function Reports() {
                 <p className="text-2xl font-bold text-success">
                   {formatCurrencyCompact(reportData.totalCredits || 0)}
                 </p>
+                <p className="text-xs text-success/70 font-medium">
+                  {formatCurrency(reportData.totalCredits || 0)}
+                </p>
                 <p className="text-sm text-muted-foreground">Total Credits</p>
               </div>
             </div>
@@ -317,6 +320,9 @@ export default function Reports() {
               <div>
                 <p className="text-2xl font-bold text-destructive">
                   {formatCurrencyCompact(reportData.totalDebits || 0)}
+                </p>
+                <p className="text-xs text-destructive/70 font-medium">
+                  {formatCurrency(reportData.totalDebits || 0)}
                 </p>
                 <p className="text-sm text-muted-foreground">Total Debits</p>
               </div>
@@ -335,6 +341,10 @@ export default function Reports() {
                   }`}>
                   {formatCurrencyCompact(reportData.netBalance || 0)}
                 </p>
+                <p className={`text-xs font-medium ${(reportData.netBalance || 0) >= 0 ? 'text-success/70' : 'text-destructive/70'
+                  }`}>
+                  {formatCurrency(reportData.netBalance || 0)}
+                </p>
                 <p className="text-sm text-muted-foreground">Net Balance</p>
               </div>
             </div>
@@ -350,6 +360,9 @@ export default function Reports() {
               <div>
                 <p className="text-2xl font-bold text-orange-500">
                   {formatCurrencyCompact(reportData.totalCommissions || 0)}
+                </p>
+                <p className="text-xs text-orange-500/70 font-medium">
+                  {formatCurrency(reportData.totalCommissions || 0)}
                 </p>
                 <p className="text-sm text-muted-foreground">Total Commission</p>
               </div>
