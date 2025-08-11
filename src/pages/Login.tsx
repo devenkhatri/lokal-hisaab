@@ -36,7 +36,7 @@ export default function Login() {
         setAuthenticated(true)
         toast({
           title: "Login Successful",
-          description: "Welcome to Local Hisab!",
+          description: "Welcome to Lokal Hisab!",
         })
       } else {
         setError(result.error || 'Login failed')
@@ -64,7 +64,7 @@ export default function Login() {
             </div>
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Local Hisab</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Lokal Hisab</h1>
             <p className="text-sm sm:text-base text-muted-foreground">Local Business Accounting System</p>
           </div>
         </div>
@@ -132,7 +132,7 @@ export default function Login() {
 
         {/* Footer */}
         <div className="text-center text-sm text-muted-foreground">
-          <p>© 2024 Local Hisab. Built for Local Indian Businesses.</p>
+          <p>© 2024 Lokal Hisab. Built for Local Indian Businesses.</p>
         </div>
       </div>
     </div>

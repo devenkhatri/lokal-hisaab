@@ -71,7 +71,7 @@ export function Sidebar() {
                 <Calculator className="w-4 h-4 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-foreground">Local Hisab</h1>
+                <h1 className="text-lg font-semibold text-foreground">Lokal Hisab</h1>
                 <p className="text-xs text-muted-foreground">Local Accounting</p>
               </div>
             </div>
