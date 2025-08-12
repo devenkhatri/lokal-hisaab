@@ -52,7 +52,7 @@ export default function Transactions() {
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false)
   const [newAccountData, setNewAccountData] = useState({ name: '', phone_number: '' })
   const [commissionError, setCommissionError] = useState('')
-  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({})
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({})
   const { toast } = useToast()
 
   // Form state
@@ -97,7 +97,7 @@ export default function Transactions() {
   // Generate transaction number in YYYYMMDD-SequenceNo format
   const generateTransactionNo = async (): Promise<string> => {
     const today = format(new Date(), 'yyyyMMdd')
-    
+
     try {
       // Get today's transactions to find the next sequence number
       const { data: todayTransactions } = await transactionsApi.getAll({
@@ -105,7 +105,7 @@ export default function Transactions() {
         date_to: format(new Date(), 'yyyy-MM-dd'),
         limit: 1000 // Get all today's transactions
       })
-      
+
       // Find the highest sequence number for today
       const todayTxnNos = todayTransactions
         .map(t => t.transaction_no)
@@ -119,44 +119,44 @@ export default function Transactions() {
           return 0
         })
         .filter(num => num > 0) // Only include valid positive sequence numbers
-      
+
       // Calculate next sequence number
       let nextSequence = 1
       if (todayTxnNos.length > 0) {
         nextSequence = Math.max(...todayTxnNos) + 1
       }
-      
+
       // Generate the transaction number
       let transactionNo = `${today}-${nextSequence.toString().padStart(3, '0')}`
-      
+
       // Double-check for uniqueness by verifying it doesn't exist
       // This is a safety measure in case of race conditions
       let attempts = 0
       const maxAttempts = 10
-      
+
       while (attempts < maxAttempts) {
         const { data: existingTransactions } = await transactionsApi.getAll({
           search: transactionNo,
           limit: 1
         })
-        
+
         // If no transaction found with this number, it's safe to use
         if (existingTransactions.length === 0) {
           break
         }
-        
+
         // If transaction exists, increment and try again
         nextSequence++
         transactionNo = `${today}-${nextSequence.toString().padStart(3, '0')}`
         attempts++
       }
-      
+
       if (attempts >= maxAttempts) {
         // If we couldn't find a unique number after max attempts, use timestamp
         const timestamp = Date.now().toString().slice(-6)
         transactionNo = `${today}-${timestamp}`
       }
-      
+
       return transactionNo
     } catch (error) {
       console.error('Error generating transaction number:', error)
@@ -201,11 +201,11 @@ export default function Transactions() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Clear previous errors
     setCommissionError('')
     setFormErrors({})
-    
+
     // Validate commission field
     const commissionValidationError = validateCommission(formData.commission)
     if (commissionValidationError) {
@@ -213,10 +213,10 @@ export default function Transactions() {
       setFormErrors(prev => ({ ...prev, commission: commissionValidationError }))
       return
     }
-    
+
     try {
       const transactionNo = formData.transaction_no || await generateTransactionNo()
-      
+
       // Parse and validate commission value one more time before submission
       let commissionValue = 0
       if (formData.commission && formData.commission.trim() !== '') {
@@ -228,7 +228,7 @@ export default function Transactions() {
           return
         }
       }
-      
+
       const transactionData = {
         ...formData,
         date: format(formData.date, 'yyyy-MM-dd'),
@@ -298,7 +298,7 @@ export default function Transactions() {
 
   const handleNewAccount = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!newAccountData.name.trim()) {
       toast({
         title: "Error",
@@ -310,18 +310,18 @@ export default function Transactions() {
 
     try {
       const newAccount = await accountsApi.create(newAccountData)
-      
+
       // Refresh accounts list
       const updatedAccounts = await accountsApi.getAll()
       setAccounts(updatedAccounts)
-      
+
       // Auto-select the new account
       setFormData(prev => ({ ...prev, account_id: newAccount.id }))
-      
+
       // Reset new account form and close dialog
       setNewAccountData({ name: '', phone_number: '' })
       setIsAddAccountOpen(false)
-      
+
       toast({
         title: "Success",
         description: "Account created and selected successfully"
@@ -477,12 +477,12 @@ export default function Transactions() {
     if (!file) return
 
     setImportFile(file)
-    
+
     const reader = new FileReader()
     reader.onload = (e) => {
       const text = e.target?.result as string
       const lines = text.split('\n').filter(line => line.trim())
-      
+
       if (lines.length < 2) {
         toast({
           title: "Error",
@@ -495,7 +495,7 @@ export default function Transactions() {
       const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
       const requiredHeaders = ['Transaction No', 'Date', 'Amount', 'Type', 'Account Name', 'Location Name', 'Description']
       const optionalHeaders = ['Commission']
-      
+
       const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
       if (missingHeaders.length > 0) {
         toast({
@@ -519,7 +519,7 @@ export default function Transactions() {
       setImportHeaders(headers)
       setImportPreview(preview)
     }
-    
+
     reader.readAsText(file)
   }
 
@@ -533,11 +533,11 @@ export default function Transactions() {
         const text = e.target?.result as string
         const lines = text.split('\n').filter(line => line.trim())
         const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
-        
+
         let successCount = 0
         let errorCount = 0
         const errorDetails: string[] = []
-        
+
         for (let i = 1; i < lines.length; i++) {
           try {
             const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim())
@@ -549,13 +549,13 @@ export default function Transactions() {
             // Find account and location by name
             const account = accounts.find(a => a.name === row['Account Name'])
             const location = locations.find(l => l.name === row['Location Name'])
-            
+
             if (!account) {
               errorDetails.push(`Row ${i}: Account not found: ${row['Account Name']}`)
               errorCount++
               continue
             }
-            
+
             if (!location) {
               errorDetails.push(`Row ${i}: Location not found: ${row['Location Name']}`)
               errorCount++
@@ -567,21 +567,21 @@ export default function Transactions() {
             if (row['Commission'] && row['Commission'].trim() !== '') {
               const commissionStr = row['Commission'].trim()
               const commissionValue = parseFloat(commissionStr)
-              
+
               // Check if it's a valid number
               if (isNaN(commissionValue)) {
                 errorDetails.push(`Row ${i}: Invalid commission format '${commissionStr}' - must be a valid number`)
                 errorCount++
                 continue
               }
-              
+
               // Check if it's non-negative
               if (commissionValue < COMMISSION_VALIDATION.MIN_VALUE) {
                 errorDetails.push(`Row ${i}: Commission cannot be negative: ${commissionValue}`)
                 errorCount++
                 continue
               }
-              
+
               // Check for reasonable decimal places
               const decimalPlaces = (commissionStr.split('.')[1] || '').length
               if (decimalPlaces > COMMISSION_VALIDATION.MAX_DECIMAL_PLACES) {
@@ -589,14 +589,14 @@ export default function Transactions() {
                 errorCount++
                 continue
               }
-              
+
               // Check for reasonable maximum value
               if (commissionValue > COMMISSION_VALIDATION.MAX_VALUE) {
                 errorDetails.push(`Row ${i}: Commission value ${commissionValue} is too large (max ${formatCurrency(COMMISSION_VALIDATION.MAX_VALUE)})`)
                 errorCount++
                 continue
               }
-              
+
               commission = commissionValue
             }
 
@@ -654,7 +654,7 @@ export default function Transactions() {
         setImportHeaders([])
         loadData()
       }
-      
+
       reader.readAsText(importFile)
     } catch (error) {
       toast({
@@ -675,14 +675,14 @@ export default function Transactions() {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Transactions</h1>
           <p className="text-sm sm:text-base text-muted-foreground">Manage all business transactions</p>
         </div>
-        
+
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <Button onClick={exportToCSV} variant="outline" size="sm" className="flex-1 sm:flex-none">
             <Download className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Export CSV</span>
             <span className="sm:hidden">Export</span>
           </Button>
-          
+
           <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
@@ -695,7 +695,7 @@ export default function Transactions() {
               <DialogHeader>
                 <DialogTitle>Import Transactions from CSV</DialogTitle>
                 <DialogDescription>
-                  Upload a CSV file to bulk import transactions. 
+                  Upload a CSV file to bulk import transactions.
                   <Button variant="link" className="p-0 h-auto" onClick={downloadSampleCSV}>
                     Download sample CSV
                   </Button> to see the required format.
@@ -746,7 +746,7 @@ export default function Transactions() {
                                 <TableCell>{row['Commission'] || '0'}</TableCell>
                               )}
                               <TableCell>
-                                <Badge variant={row['Type'] === 'credit' ? 'default' : 'secondary'}>
+                                <Badge variant={row['Type'] === 'credit' ? 'success' : 'destructive'}>
                                   {row['Type']}
                                 </Badge>
                               </TableCell>
@@ -762,16 +762,16 @@ export default function Transactions() {
                 )}
 
                 <div className="flex gap-3 pt-4">
-                  <Button 
-                    onClick={processImport} 
+                  <Button
+                    onClick={processImport}
                     disabled={!importFile || importing}
                     className="flex-1"
                   >
                     {importing ? 'Importing...' : 'Import Transactions'}
                   </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={() => {
                       setIsImportOpen(false)
                       setImportFile(null)
@@ -785,7 +785,7 @@ export default function Transactions() {
               </div>
             </DialogContent>
           </Dialog>
-          
+
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
               <Button onClick={openAddDialog} className="flex-1 sm:flex-none">
@@ -829,7 +829,7 @@ export default function Transactions() {
                       }}
                     />
                   </div>
-                  
+
                   <div className="space-y-1">
                     <Label htmlFor="commission" className="text-sm font-medium">Commission (₹)</Label>
                     <Input
@@ -842,7 +842,7 @@ export default function Transactions() {
                       onChange={(e) => {
                         const value = e.target.value
                         setFormData(prev => ({ ...prev, commission: value }))
-                        
+
                         // Clear errors when user starts typing
                         if (commissionError) {
                           setCommissionError('')
@@ -871,7 +871,7 @@ export default function Transactions() {
                           e.preventDefault()
                           return
                         }
-                        
+
                         if (e.key === 'Enter') {
                           e.preventDefault()
                           const typeButton = document.querySelector('[aria-label="Type"]') as HTMLElement
@@ -895,8 +895,8 @@ export default function Transactions() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label htmlFor="type" className="text-sm font-medium">Type *</Label>
-                    <Select 
-                      value={formData.type} 
+                    <Select
+                      value={formData.type}
                       onValueChange={(value: 'credit' | 'debit') => setFormData(prev => ({ ...prev, type: value }))}
                     >
                       <SelectTrigger aria-label="Type" tabIndex={3} className="h-9">
@@ -948,8 +948,8 @@ export default function Transactions() {
                         Add
                       </Button>
                     </div>
-                    <Select 
-                      value={formData.account_id} 
+                    <Select
+                      value={formData.account_id}
                       onValueChange={(value) => setFormData(prev => ({ ...prev, account_id: value }))}
                     >
                       <SelectTrigger tabIndex={5} className="h-9">
@@ -967,8 +967,8 @@ export default function Transactions() {
 
                   <div className="space-y-1">
                     <Label htmlFor="location_id" className="text-sm font-medium">Location *</Label>
-                    <Select 
-                      value={formData.location_id} 
+                    <Select
+                      value={formData.location_id}
                       onValueChange={(value) => setFormData(prev => ({ ...prev, location_id: value }))}
                     >
                       <SelectTrigger tabIndex={6} className="h-9">
@@ -1021,16 +1021,16 @@ export default function Transactions() {
 
                 {/* Action buttons */}
                 <div className="flex gap-2 pt-3">
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="flex-1 h-9"
                     tabIndex={8}
                   >
                     {editingTransaction ? 'Update' : 'Save'} Transaction
                   </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={() => setIsFormOpen(false)}
                     className="h-9"
                     tabIndex={9}
@@ -1069,7 +1069,7 @@ export default function Transactions() {
 
             <div className="space-y-2">
               <Label>Location</Label>
-              <Select value={filters.location_id || 'all'} onValueChange={(value) => 
+              <Select value={filters.location_id || 'all'} onValueChange={(value) =>
                 setFilters(prev => ({ ...prev, location_id: value === 'all' ? undefined : value }))
               }>
                 <SelectTrigger>
@@ -1088,7 +1088,7 @@ export default function Transactions() {
 
             <div className="space-y-2">
               <Label>Account</Label>
-              <Select value={filters.account_id || 'all'} onValueChange={(value) => 
+              <Select value={filters.account_id || 'all'} onValueChange={(value) =>
                 setFilters(prev => ({ ...prev, account_id: value === 'all' ? undefined : value }))
               }>
                 <SelectTrigger>
@@ -1107,7 +1107,7 @@ export default function Transactions() {
 
             <div className="space-y-2">
               <Label>Type</Label>
-              <Select value={filters.type || 'all'} onValueChange={(value) => 
+              <Select value={filters.type || 'all'} onValueChange={(value) =>
                 setFilters(prev => ({ ...prev, type: value === 'all' ? undefined : value as 'credit' | 'debit' }))
               }>
                 <SelectTrigger>
@@ -1202,72 +1202,72 @@ export default function Transactions() {
                   </div>
                 </div>
               )}
-              
+
               <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Transaction No</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead className="hidden sm:table-cell">Commission</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="hidden md:table-cell">Account</TableHead>
-                    <TableHead className="hidden lg:table-cell">Location</TableHead>
-                    <TableHead className="hidden xl:table-cell">Description</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell className="font-medium">
-                        {transaction.transaction_no}
-                      </TableCell>
-                      <TableCell>{formatDate(transaction.date)}</TableCell>
-                      <TableCell>
-                        <span className={transaction.type === 'credit' ? 'text-success' : 'text-destructive'}>
-                          {formatCurrency(transaction.amount)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <span className="text-muted-foreground">
-                          {formatCurrency(transaction.commission || 0)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={transaction.type === 'credit' ? 'default' : 'destructive'}>
-                          {transaction.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">{transaction.accounts?.name}</TableCell>
-                      <TableCell className="hidden lg:table-cell">{transaction.locations?.name}</TableCell>
-                      <TableCell className="hidden xl:table-cell max-w-xs truncate">
-                        {transaction.description}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(transaction)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(transaction.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Transaction No</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead className="hidden sm:table-cell">Commission</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="hidden md:table-cell">Account</TableHead>
+                      <TableHead className="hidden lg:table-cell">Location</TableHead>
+                      <TableHead className="hidden xl:table-cell">Description</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((transaction) => (
+                      <TableRow key={transaction.id}>
+                        <TableCell className="font-medium">
+                          {transaction.transaction_no}
+                        </TableCell>
+                        <TableCell>{formatDate(transaction.date)}</TableCell>
+                        <TableCell>
+                          <span className={transaction.type === 'credit' ? 'text-success' : 'text-destructive'}>
+                            {formatCurrency(transaction.amount)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <span className="text-muted-foreground">
+                            {formatCurrency(transaction.commission || 0)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={transaction.type === 'credit' ? 'success' : 'destructive'}>
+                            {transaction.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">{transaction.accounts?.name}</TableCell>
+                        <TableCell className="hidden lg:table-cell">{transaction.locations?.name}</TableCell>
+                        <TableCell className="hidden xl:table-cell max-w-xs truncate">
+                          {transaction.description}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditDialog(transaction)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(transaction.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </>
           )}
 
@@ -1311,9 +1311,9 @@ export default function Transactions() {
               <Button type="submit" className="flex-1">
                 Create Account
               </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => {
                   setIsAddAccountOpen(false)
                   setNewAccountData({ name: '', phone_number: '' })

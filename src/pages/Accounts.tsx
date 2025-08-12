@@ -252,7 +252,7 @@ export default function Accounts() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={transaction.type === 'credit' ? 'default' : 'destructive'}>
+                        <Badge variant={transaction.type === 'credit' ? 'success' : 'destructive'}>
                           {transaction.type}
                         </Badge>
                       </TableCell>
