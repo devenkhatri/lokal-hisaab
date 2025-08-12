@@ -21,8 +21,8 @@ import { cn } from '@/lib/utils'
 
 // Commission validation utility
 const COMMISSION_VALIDATION = {
-  MAX_VALUE: 999999999.99,
-  MAX_DECIMAL_PLACES: 2,
+  MAX_VALUE: 999999999.999,
+  MAX_DECIMAL_PLACES: 3,
   MIN_VALUE: 0
 } as const
 
@@ -41,8 +41,7 @@ export default function Transactions() {
   const [locations, setLocations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState<TransactionFilters>({})
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<any>(null)
   const [isImportOpen, setIsImportOpen] = useState(false)
@@ -72,13 +71,12 @@ export default function Transactions() {
     try {
       setLoading(true)
       const [transactionsResult, accountsResult, locationsResult] = await Promise.all([
-        transactionsApi.getAll({ ...filters, page: currentPage, limit: 20 }),
+        transactionsApi.getAll({ ...filters, limit: 10000 }), // Load all transactions with high limit
         accountsApi.getAll(),
         locationsApi.getAll()
       ])
 
       setTransactions(transactionsResult.data)
-      setTotalPages(Math.ceil(transactionsResult.count / 20))
       setAccounts(accountsResult)
       setLocations(locationsResult)
     } catch (error) {
@@ -94,7 +92,7 @@ export default function Transactions() {
 
   useEffect(() => {
     loadData()
-  }, [filters, currentPage])
+  }, [filters])
 
   // Generate transaction number in YYYYMMDD-SequenceNo format
   const generateTransactionNo = async (): Promise<string> => {
@@ -814,10 +812,10 @@ export default function Transactions() {
                     <Input
                       id="amount"
                       type="number"
-                      step="0.01"
+                      step="0.001"
                       value={formData.amount}
                       onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                      placeholder="0.00"
+                      placeholder="0.000"
                       required
                       autoFocus
                       tabIndex={1}
@@ -837,7 +835,7 @@ export default function Transactions() {
                     <Input
                       id="commission"
                       type="number"
-                      step="0.01"
+                      step="0.001"
                       min="0"
                       max={COMMISSION_VALIDATION.MAX_VALUE.toString()}
                       value={formData.commission}
@@ -1164,7 +1162,48 @@ export default function Transactions() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+              {/* Summary Totals */}
+              {transactions.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 p-4 bg-muted/50 rounded-lg">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-success">
+                      {formatCurrency(
+                        transactions
+                          .filter(t => t.type === 'credit')
+                          .reduce((sum, t) => sum + Number(t.amount), 0)
+                      )}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Total Credits</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-destructive">
+                      {formatCurrency(
+                        transactions
+                          .filter(t => t.type === 'debit')
+                          .reduce((sum, t) => sum + Number(t.amount), 0)
+                      )}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Total Debits</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-orange-600">
+                      {formatCurrency(
+                        transactions.reduce((sum, t) => sum + Number(t.commission || 0), 0)
+                      )}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Total Commission</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold">
+                      {transactions.length}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Total Records</p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1229,30 +1268,10 @@ export default function Transactions() {
                 </TableBody>
               </Table>
             </div>
+            </>
           )}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </Button>
-              <span className="flex items-center px-4">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          )}
+
         </CardContent>
       </Card>
 

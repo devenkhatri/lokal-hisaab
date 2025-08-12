@@ -58,10 +58,10 @@ This document summarizes the comprehensive end-to-end testing implementation for
 ## Key Testing Scenarios
 
 ### Commission Field Validation
-- ✅ Accepts valid decimal numbers (0, 10.50, 999.99)
-- ✅ Rejects negative values (-10.50)
+- ✅ Accepts valid decimal numbers (0, 10.500, 999.999)
+- ✅ Rejects negative values (-10.500)
 - ✅ Rejects non-numeric strings (abc, $100, 10,000)
-- ✅ Rejects excessive decimal places (10.123)
+- ✅ Rejects excessive decimal places (10.1234)
 - ✅ Rejects values exceeding maximum limit (1000000000)
 - ✅ Handles empty values (defaults to 0)
 - ✅ Supports scientific notation (1e2)

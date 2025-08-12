@@ -100,7 +100,7 @@ describe('Commission API Integration', () => {
   describe('Transaction Updates with Commission', () => {
     it('should update transaction commission field', async () => {
       const updateData = {
-        commission: 75.50,
+        commission: 75.500,
         description: 'Updated with commission'
       }
 
@@ -115,7 +115,7 @@ describe('Commission API Integration', () => {
 
       const result = await transactionsApi.update('txn-1', updateData)
 
-      expect(result.commission).toBe(75.50)
+      expect(result.commission).toBe(75.500)
       expect(result.commission).toBe(75.50)
     })
 
@@ -186,7 +186,7 @@ describe('Commission API Integration', () => {
         id: 'txn-1',
         transaction_no: '20250108-001',
         amount: 1000,
-        commission: 25.75,
+        commission: 25.750,
         type: 'credit',
         accounts: { id: 'acc-1', name: 'Test Account' },
         locations: { id: 'loc-1', name: 'Test Location' }
@@ -196,7 +196,7 @@ describe('Commission API Integration', () => {
 
       const result = await transactionsApi.getById('txn-1')
 
-      expect(result.commission).toBe(25.75)
+      expect(result.commission).toBe(25.750)
     })
   })
 

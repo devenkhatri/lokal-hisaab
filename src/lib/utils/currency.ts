@@ -5,19 +5,19 @@ export const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
   }).format(amount)
 }
 
 export const formatCurrencyCompact = (amount: number): string => {
   // For large numbers, show in lakhs/crores
   if (amount >= 10000000) { // 1 crore
-    return `₹${(amount / 10000000).toFixed(1)}Cr`
+    return `₹${(amount / 10000000).toFixed(3)}Cr`
   } else if (amount >= 100000) { // 1 lakh
-    return `₹${(amount / 100000).toFixed(1)}L`
+    return `₹${(amount / 100000).toFixed(3)}L`
   } else if (amount >= 1000) { // 1 thousand
-    return `₹${(amount / 1000).toFixed(1)}K`
+    return `₹${(amount / 1000).toFixed(3)}K`
   }
   return formatCurrency(amount)
 }

@@ -61,10 +61,10 @@ describe('Commission Validation', () => {
       expect(validateCommission('1000')).toBe('')
     })
 
-    it('should accept positive decimals with up to 2 decimal places', () => {
+    it('should accept positive decimals with up to 3 decimal places', () => {
       expect(validateCommission('10.5')).toBe('')
-      expect(validateCommission('10.50')).toBe('')
-      expect(validateCommission('999.99')).toBe('')
+      expect(validateCommission('10.500')).toBe('')
+      expect(validateCommission('999.999')).toBe('')
     })
 
     it('should accept values with leading/trailing whitespace', () => {
@@ -73,7 +73,7 @@ describe('Commission Validation', () => {
     })
 
     it('should accept maximum allowed value', () => {
-      expect(validateCommission('999999999.99')).toBe('')
+      expect(validateCommission('999999999.999')).toBe('')
     })
   })
 
@@ -91,15 +91,15 @@ describe('Commission Validation', () => {
       expect(validateCommission('10,000')).toBe('Commission must be a valid number')
     })
 
-    it('should reject values with more than 2 decimal places', () => {
-      expect(validateCommission('10.123')).toBe('Commission can have at most 2 decimal places')
-      expect(validateCommission('5.9999')).toBe('Commission can have at most 2 decimal places')
-      expect(validateCommission('0.001')).toBe('Commission can have at most 2 decimal places')
+    it('should reject values with more than 3 decimal places', () => {
+      expect(validateCommission('10.1234')).toBe('Commission can have at most 3 decimal places')
+      expect(validateCommission('5.99999')).toBe('Commission can have at most 3 decimal places')
+      expect(validateCommission('0.0001')).toBe('Commission can have at most 3 decimal places')
     })
 
     it('should reject values exceeding maximum limit', () => {
-      expect(validateCommission('1000000000')).toBe('Commission value is too large (maximum: 999999999.99)')
-      expect(validateCommission('999999999.999')).toBe('Commission can have at most 2 decimal places')
+      expect(validateCommission('1000000000')).toBe('Commission value is too large (maximum: 999999999.999)')
+      expect(validateCommission('999999999.9999')).toBe('Commission can have at most 3 decimal places')
     })
   })
 

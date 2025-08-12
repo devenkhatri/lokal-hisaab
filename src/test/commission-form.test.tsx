@@ -123,7 +123,7 @@ const CommissionFormTest = () => {
       <input
         data-testid="commission-input"
         type="number"
-        step="0.01"
+        step="0.001"
         min="0"
         value={formData.commission}
         onChange={(e) => handleCommissionChange(e.target.value)}
@@ -173,7 +173,7 @@ describe('Commission Form Integration', () => {
       const commissionInput = screen.getByTestId('commission-input')
       expect(commissionInput).toBeInTheDocument()
       expect(commissionInput).toHaveAttribute('type', 'number')
-      expect(commissionInput).toHaveAttribute('step', '0.01')
+      expect(commissionInput).toHaveAttribute('step', '0.001')
       expect(commissionInput).toHaveAttribute('min', '0')
     })
 
