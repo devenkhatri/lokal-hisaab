@@ -1,0 +1,15 @@
+[build]
+  # Build command
+  command = "npm run build"
+  # Directory to publish
+  publish = "dist"
+
+[[redirects]]
+  # Redirect all routes to index.html for SPA routing
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[build.environment]
+  # Node version (optional)
+  NODE_VERSION = "18"
