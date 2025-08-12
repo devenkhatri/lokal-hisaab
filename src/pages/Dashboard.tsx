@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   TrendingUp,
   TrendingDown,
@@ -267,82 +268,161 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="border-success/20 bg-success/5 min-w-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium truncate">Credits</CardTitle>
-            <TrendingUp className="h-4 w-4 text-success flex-shrink-0" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-success truncate">
-              {formatCurrency(dashboardData.selectedDateCredits)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Money received on {format(selectedDate, 'MMM dd')}
-            </p>
-          </CardContent>
-        </Card>
+      <TooltipProvider>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="border-success/20 bg-success/5 min-w-0 transition-all hover:shadow-md hover:scale-[1.02]">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium truncate">Credits</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-success flex-shrink-0" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl sm:text-2xl font-bold text-success truncate">
+                    {formatCurrency(dashboardData.selectedDateCredits)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Money received on {format(selectedDate, 'MMM dd')}
+                  </p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs p-4">
+              <div className="space-y-2">
+                <h4 className="font-semibold text-success">Credit Transactions</h4>
+                <div className="space-y-1 text-sm">
+                  <p><strong>Date:</strong> {format(selectedDate, 'MMMM dd, yyyy')}</p>
+                  <p><strong>Total Amount:</strong> {formatCurrency(dashboardData.selectedDateCredits)}</p>
+                  <p><strong>Transaction Count:</strong> {dashboardData.recentTransactions.filter(t => t.type === 'credit').length}</p>
+                  <p><strong>Weekly Average:</strong> {formatCurrency(dashboardData.weeklyAverage > 0 ? dashboardData.weeklyAverage : 0)}</p>
+                  <p className="text-muted-foreground mt-2">
+                    Credits represent money received from customers, clients, or other income sources.
+                  </p>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
 
-        <Card className="border-destructive/20 bg-destructive/5 min-w-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium truncate">Debits</CardTitle>
-            <TrendingDown className="h-4 w-4 text-destructive flex-shrink-0" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-destructive truncate">
-              {formatCurrency(dashboardData.selectedDateDebits)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Payments made on {format(selectedDate, 'MMM dd')}
-            </p>
-          </CardContent>
-        </Card>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="border-destructive/20 bg-destructive/5 min-w-0 transition-all hover:shadow-md hover:scale-[1.02]">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium truncate">Debits</CardTitle>
+                  <TrendingDown className="h-4 w-4 text-destructive flex-shrink-0" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl sm:text-2xl font-bold text-destructive truncate">
+                    {formatCurrency(dashboardData.selectedDateDebits)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Payments made on {format(selectedDate, 'MMM dd')}
+                  </p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs p-4">
+              <div className="space-y-2">
+                <h4 className="font-semibold text-destructive">Debit Transactions</h4>
+                <div className="space-y-1 text-sm">
+                  <p><strong>Date:</strong> {format(selectedDate, 'MMMM dd, yyyy')}</p>
+                  <p><strong>Total Amount:</strong> {formatCurrency(dashboardData.selectedDateDebits)}</p>
+                  <p><strong>Transaction Count:</strong> {dashboardData.recentTransactions.filter(t => t.type === 'debit').length}</p>
+                  <p><strong>Avg Transaction:</strong> {formatCurrency(dashboardData.selectedDateDebits > 0 && dashboardData.recentTransactions.filter(t => t.type === 'debit').length > 0 ? dashboardData.selectedDateDebits / dashboardData.recentTransactions.filter(t => t.type === 'debit').length : 0)}</p>
+                  <p className="text-muted-foreground mt-2">
+                    Debits represent payments made to vendors, suppliers, or other expenses.
+                  </p>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
 
-        <Card className="border-primary/20 bg-primary/5 min-w-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium truncate">Net Balance</CardTitle>
-            <IndianRupee className="h-4 w-4 text-primary flex-shrink-0" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-xl sm:text-2xl font-bold truncate ${dashboardData.netBalance >= 0 ? 'text-success' : 'text-destructive'
-              }`}>
-              {formatCurrency(dashboardData.netBalance)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Net for {format(selectedDate, 'MMM dd')}
-            </p>
-          </CardContent>
-        </Card>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="border-primary/20 bg-primary/5 min-w-0 transition-all hover:shadow-md hover:scale-[1.02]">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium truncate">Net Balance</CardTitle>
+                  <IndianRupee className="h-4 w-4 text-primary flex-shrink-0" />
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-xl sm:text-2xl font-bold truncate ${dashboardData.netBalance >= 0 ? 'text-success' : 'text-destructive'
+                    }`}>
+                    {formatCurrency(dashboardData.netBalance)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Net for {format(selectedDate, 'MMM dd')}
+                  </p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs p-4">
+              <div className="space-y-2">
+                <h4 className="font-semibold">Net Balance</h4>
+                <div className="space-y-1 text-sm">
+                  <p><strong>Date:</strong> {format(selectedDate, 'MMMM dd, yyyy')}</p>
+                  <p><strong>Credits:</strong> {formatCurrency(dashboardData.selectedDateCredits)}</p>
+                  <p><strong>Debits:</strong> {formatCurrency(dashboardData.selectedDateDebits)}</p>
+                  <p><strong>Net Balance:</strong> <span className={dashboardData.netBalance >= 0 ? 'text-success' : 'text-destructive'}>{formatCurrency(dashboardData.netBalance)}</span></p>
+                  <p><strong>Monthly Net:</strong> {formatCurrency(dashboardData.monthlyTotal)}</p>
+                  <p className="text-muted-foreground mt-2">
+                    Net balance is calculated as Credits minus Debits. {dashboardData.netBalance >= 0 ? 'Positive indicates profit.' : 'Negative indicates loss.'}
+                  </p>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
 
-        <Card className="border-orange-500/20 bg-orange-500/5 min-w-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium truncate">Commission</CardTitle>
-            <Receipt className="h-4 w-4 text-orange-500 flex-shrink-0" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-orange-500 truncate">
-              {formatCurrency(dashboardData.selectedDateCommissions)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Commission on {format(selectedDate, 'MMM dd')}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="border-orange-500/20 bg-orange-500/5 min-w-0 transition-all hover:shadow-md hover:scale-[1.02]">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium truncate">Commission</CardTitle>
+                  <Receipt className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl sm:text-2xl font-bold text-orange-500 truncate">
+                    {formatCurrency(dashboardData.selectedDateCommissions)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Commission on {format(selectedDate, 'MMM dd')}
+                  </p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs p-4">
+              <div className="space-y-2">
+                <h4 className="font-semibold text-orange-500">Commission Earnings</h4>
+                <div className="space-y-1 text-sm">
+                  <p><strong>Date:</strong> {format(selectedDate, 'MMMM dd, yyyy')}</p>
+                  <p><strong>Total Commission:</strong> {formatCurrency(dashboardData.selectedDateCommissions)}</p>
+                  <p><strong>Commission Transactions:</strong> {dashboardData.recentTransactions.filter(t => Number(t.commission || 0) > 0).length}</p>
+                  <p><strong>Avg Commission:</strong> {formatCurrency(dashboardData.selectedDateCommissions > 0 && dashboardData.recentTransactions.filter(t => Number(t.commission || 0) > 0).length > 0 ? dashboardData.selectedDateCommissions / dashboardData.recentTransactions.filter(t => Number(t.commission || 0) > 0).length : 0)}</p>
+                  <p><strong>Top Account:</strong> {dashboardData.topAccount.name}</p>
+                  <p className="text-muted-foreground mt-2">
+                    Commission represents earnings from transactions, typically a percentage of the transaction amount.
+                  </p>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
 
       {/* Additional Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Key Metrics */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="w-5 h-5" />
-              Key Metrics
-            </CardTitle>
-            <CardDescription>
-              Performance insights for {format(selectedDate, 'MMMM dd, yyyy')}
-            </CardDescription>
-          </CardHeader>
+      <TooltipProvider>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          {/* Key Metrics */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="transition-all hover:shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="w-5 h-5" />
+                    Key Metrics
+                  </CardTitle>
+                  <CardDescription>
+                    Performance insights for {format(selectedDate, 'MMMM dd, yyyy')}
+                  </CardDescription>
+                </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
@@ -365,10 +445,30 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground">Daily average for last 7 days</p>
             </div>
           </CardContent>
-        </Card>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-sm p-4">
+              <div className="space-y-2">
+                <h4 className="font-semibold">Key Performance Metrics</h4>
+                <div className="space-y-1 text-sm">
+                  <p><strong>Date:</strong> {format(selectedDate, 'MMMM dd, yyyy')}</p>
+                  <p><strong>Total Transactions:</strong> {dashboardData.transactionCount}</p>
+                  <p><strong>Average Amount:</strong> {formatCurrency(dashboardData.avgTransactionAmount)}</p>
+                  <p><strong>Top Account:</strong> {dashboardData.topAccount.name}</p>
+                  <p><strong>Top Account Volume:</strong> {formatCurrency(dashboardData.topAccount.amount)}</p>
+                  <p><strong>Weekly Daily Avg:</strong> {formatCurrency(dashboardData.weeklyAverage)}</p>
+                  <p className="text-muted-foreground mt-2">
+                    Key performance indicators showing transaction volume, averages, and top performers for the selected date.
+                  </p>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
 
-        {/* Recent Transactions */}
-        <Card>
+          {/* Recent Transactions */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="w-5 h-5" />
@@ -414,59 +514,157 @@ export default function Dashboard() {
               )}
             </div>
           </CardContent>
-        </Card>
-      </div>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-sm p-4">
+              <div className="space-y-2">
+                <h4 className="font-semibold">Recent Transactions</h4>
+                <div className="space-y-1 text-sm">
+                  <p><strong>Date:</strong> {format(selectedDate, 'MMMM dd, yyyy')}</p>
+                  <p><strong>Showing:</strong> Last 5 transactions</p>
+                  <p><strong>Total for Date:</strong> {dashboardData.transactionCount} transactions</p>
+                  <p><strong>Credits:</strong> {dashboardData.recentTransactions.filter(t => t.type === 'credit').length}</p>
+                  <p><strong>Debits:</strong> {dashboardData.recentTransactions.filter(t => t.type === 'debit').length}</p>
+                  <p><strong>With Commission:</strong> {dashboardData.recentTransactions.filter(t => Number(t.commission || 0) > 0).length}</p>
+                  <p className="text-muted-foreground mt-2">
+                    Most recent transactions for the selected date, sorted by creation time. Green dots indicate credits, red dots indicate debits.
+                  </p>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Receipt className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-lg sm:text-2xl font-bold">{dashboardData.totalTransactions}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Total Transactions</p>
+      <TooltipProvider>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="transition-all hover:shadow-md hover:scale-[1.02]">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Receipt className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-lg sm:text-2xl font-bold">{dashboardData.totalTransactions}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Total Transactions</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs p-4">
+              <div className="space-y-2">
+                <h4 className="font-semibold">Total Transactions</h4>
+                <div className="space-y-1 text-sm">
+                  <p><strong>All Time Total:</strong> {dashboardData.totalTransactions}</p>
+                  <p><strong>Selected Date:</strong> {dashboardData.transactionCount}</p>
+                  <p><strong>Location Filter:</strong> {selectedLocationId ? locations.find(l => l.id === selectedLocationId)?.name || 'Unknown' : 'All Locations'}</p>
+                  <p className="text-muted-foreground mt-2">
+                    Total count of all transactions recorded in the system across all time periods.
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </TooltipContent>
+          </Tooltip>
 
-        <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-success flex-shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-lg sm:text-2xl font-bold">{dashboardData.activeAccounts}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Active Accounts</p>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="transition-all hover:shadow-md hover:scale-[1.02]">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Users className="w-6 h-6 sm:w-8 sm:h-8 text-success flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-lg sm:text-2xl font-bold">{dashboardData.activeAccounts}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Active Accounts</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs p-4">
+              <div className="space-y-2">
+                <h4 className="font-semibold text-success">Active Accounts</h4>
+                <div className="space-y-1 text-sm">
+                  <p><strong>Active in Last 7 Days:</strong> {dashboardData.activeAccounts}</p>
+                  <p><strong>Top Performer:</strong> {dashboardData.topAccount.name}</p>
+                  <p><strong>Top Amount:</strong> {formatCurrency(dashboardData.topAccount.amount)}</p>
+                  <p className="text-muted-foreground mt-2">
+                    Accounts that have had transactions in the last 7 days from the selected date.
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </TooltipContent>
+          </Tooltip>
 
-        <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-destructive flex-shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-lg sm:text-2xl font-bold">{dashboardData.totalLocations}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Business Locations</p>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="transition-all hover:shadow-md hover:scale-[1.02]">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-destructive flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-lg sm:text-2xl font-bold">{dashboardData.totalLocations}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Business Locations</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs p-4">
+              <div className="space-y-2">
+                <h4 className="font-semibold">Business Locations</h4>
+                <div className="space-y-1 text-sm">
+                  <p><strong>Total Locations:</strong> {dashboardData.totalLocations}</p>
+                  <p><strong>Current Filter:</strong> {selectedLocationId ? locations.find(l => l.id === selectedLocationId)?.name || 'Unknown' : 'All Locations'}</p>
+                  <div className="mt-2">
+                    <p className="font-medium">Available Locations:</p>
+                    <ul className="list-disc list-inside text-xs space-y-1 mt-1">
+                      {locations.slice(0, 3).map(location => (
+                        <li key={location.id}>{location.name}</li>
+                      ))}
+                      {locations.length > 3 && <li>+{locations.length - 3} more...</li>}
+                    </ul>
+                  </div>
+                  <p className="text-muted-foreground mt-2">
+                    Total number of business locations configured in the system.
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </TooltipContent>
+          </Tooltip>
 
-        <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <IndianRupee className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-lg sm:text-2xl font-bold truncate">{formatCurrencyCompact(dashboardData.monthlyTotal)}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Monthly Total</p>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="transition-all hover:shadow-md hover:scale-[1.02]">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <IndianRupee className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-lg sm:text-2xl font-bold truncate">{formatCurrency(dashboardData.monthlyTotal)}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Monthly Total</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs p-4">
+              <div className="space-y-2">
+                <h4 className="font-semibold">Monthly Total</h4>
+                <div className="space-y-1 text-sm">
+                  <p><strong>Month:</strong> {format(selectedDate, 'MMMM yyyy')}</p>
+                  <p><strong>Net Total:</strong> <span className={dashboardData.monthlyTotal >= 0 ? 'text-success' : 'text-destructive'}>{formatCurrency(dashboardData.monthlyTotal)}</span></p>
+                  <p><strong>Daily Average:</strong> {formatCurrency(dashboardData.monthlyTotal / selectedDate.getDate())}</p>
+                  <p><strong>Weekly Average:</strong> {formatCurrency(dashboardData.weeklyAverage)}</p>
+                  <p className="text-muted-foreground mt-2">
+                    Net total (Credits - Debits) from the beginning of {format(selectedDate, 'MMMM')} to the selected date.
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
     </div>
   )
 }
