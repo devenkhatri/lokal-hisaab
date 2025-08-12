@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import {
   TrendingUp,
   TrendingDown,
@@ -9,60 +12,96 @@ import {
   Users,
   MapPin,
   Receipt,
-  Calendar
+  Calendar,
+  CalendarIcon,
+  Activity,
+  Target
 } from 'lucide-react'
 import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/currency'
 import { formatDate, getDateRange } from '@/lib/utils/date'
+import { format } from 'date-fns'
+import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 import { transactionsApi, accountsApi, locationsApi } from '@/lib/api'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { Pie, PieChart, Cell } from 'recharts'
+
 
 
 
 export default function Dashboard() {
   const { selectedLocationId, setSelectedLocationId } = useAppStore()
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [dashboardData, setDashboardData] = useState({
-    todayCredits: 0,
-    todayDebits: 0,
+    selectedDateCredits: 0,
+    selectedDateDebits: 0,
     netBalance: 0,
-    todayCommissions: 0,
+    selectedDateCommissions: 0,
     totalTransactions: 0,
     activeAccounts: 0,
     totalLocations: 0,
     monthlyTotal: 0,
-
-    accountData: [] as Array<{ name: string; total: number; color: string }>
+    weeklyAverage: 0,
+    transactionCount: 0,
+    avgTransactionAmount: 0,
+    topAccount: { name: '', amount: 0 },
+    recentTransactions: [] as any[]
   })
   const [locations, setLocations] = useState<any[]>([])
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        // Load all required data in parallel
-        const [stats, locationsData, accountsData] = await Promise.all([
-          transactionsApi.getDashboardStats(selectedLocationId || undefined),
+        // Load locations data
+        const [locationsData, accountsData] = await Promise.all([
           locationsApi.getAll(),
           accountsApi.getAll()
         ])
         
-        // Get last 7 days transactions for chart
-        const sevenDaysAgo = new Date()
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
-        
-        const { data: recentTransactions } = await transactionsApi.getAll({
+        // Get selected date transactions
+        const selectedDateStr = format(selectedDate, 'yyyy-MM-dd')
+        const { data: selectedDateTransactions } = await transactionsApi.getAll({
           location_id: selectedLocationId || undefined,
-          date_from: sevenDaysAgo.toISOString().split('T')[0],
+          date_from: selectedDateStr,
+          date_to: selectedDateStr,
           limit: 1000
         })
 
+        // Calculate selected date metrics
+        const selectedDateCredits = selectedDateTransactions
+          .filter(t => t.type === 'credit')
+          .reduce((sum, t) => sum + Number(t.amount), 0)
+        
+        const selectedDateDebits = selectedDateTransactions
+          .filter(t => t.type === 'debit')
+          .reduce((sum, t) => sum + Number(t.amount), 0)
+        
+        const selectedDateCommissions = selectedDateTransactions
+          .reduce((sum, t) => sum + Number(t.commission || 0), 0)
+
+        // Get last 7 days for weekly average
+        const sevenDaysAgo = new Date(selectedDate)
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
+        
+        const { data: weeklyTransactions } = await transactionsApi.getAll({
+          location_id: selectedLocationId || undefined,
+          date_from: sevenDaysAgo.toISOString().split('T')[0],
+          date_to: selectedDateStr,
+          limit: 1000
+        })
+
+        // Calculate weekly average
+        const weeklyTotal = weeklyTransactions.reduce((sum, t) => {
+          return sum + (t.type === 'credit' ? Number(t.amount) : -Number(t.amount))
+        }, 0)
+        const weeklyAverage = weeklyTotal / 7
+
         // Get monthly transactions for monthly total
-        const firstDayOfMonth = new Date()
-        firstDayOfMonth.setDate(1)
+        const firstDayOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
         
         const { data: monthlyTransactions } = await transactionsApi.getAll({
           location_id: selectedLocationId || undefined,
           date_from: firstDayOfMonth.toISOString().split('T')[0],
+          date_to: selectedDateStr,
           limit: 1000
         })
 
@@ -70,10 +109,13 @@ export default function Dashboard() {
           return sum + (t.type === 'credit' ? Number(t.amount) : -Number(t.amount))
         }, 0)
 
+        // Calculate average transaction amount for selected date
+        const avgTransactionAmount = selectedDateTransactions.length > 0 
+          ? selectedDateTransactions.reduce((sum, t) => sum + Number(t.amount), 0) / selectedDateTransactions.length
+          : 0
 
-
-        // Get account-wise data
-        const accountSummary = recentTransactions.reduce((acc: any, transaction) => {
+        // Find top account for selected date
+        const accountSummary = selectedDateTransactions.reduce((acc: any, transaction) => {
           const accountName = transaction.accounts?.name || 'Unknown'
           if (!acc[accountName]) {
             acc[accountName] = 0
@@ -82,55 +124,63 @@ export default function Dashboard() {
           return acc
         }, {})
 
-        const accountData = Object.entries(accountSummary)
-          .sort(([,a], [,b]) => (b as number) - (a as number))
-          .slice(0, 4)
-          .map(([name, total], index) => ({
-            name,
-            total: total as number,
-            color: `hsl(var(--chart-${index + 1}))`
-          }))
+        const topAccountEntry = Object.entries(accountSummary)
+          .sort(([,a], [,b]) => (b as number) - (a as number))[0]
+        
+        const topAccount = topAccountEntry 
+          ? { name: topAccountEntry[0] as string, amount: topAccountEntry[1] as number }
+          : { name: 'No transactions', amount: 0 }
 
-        // Count unique accounts that have transactions
-        const uniqueAccounts = new Set(recentTransactions.map(t => t.account_id))
+        // Get recent transactions (last 5 for selected date)
+        const recentTransactions = selectedDateTransactions
+          .sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
+          .slice(0, 5)
+
+        // Count unique accounts that have transactions in the period
+        const uniqueAccounts = new Set(weeklyTransactions.map(t => t.account_id))
+
+        // Get total transactions count from API
+        const stats = await transactionsApi.getDashboardStats(selectedLocationId || undefined)
 
         setLocations(locationsData)
         setDashboardData({
-          todayCredits: stats.todayCredits,
-          todayDebits: stats.todayDebits,
-          netBalance: stats.netBalance,
-          todayCommissions: stats.todayCommissions,
+          selectedDateCredits,
+          selectedDateDebits,
+          netBalance: selectedDateCredits - selectedDateDebits,
+          selectedDateCommissions,
           totalTransactions: stats.totalTransactions,
           activeAccounts: uniqueAccounts.size,
           totalLocations: locationsData.length,
           monthlyTotal,
-          accountData
+          weeklyAverage,
+          transactionCount: selectedDateTransactions.length,
+          avgTransactionAmount,
+          topAccount,
+          recentTransactions
         })
       } catch (error) {
         console.error('Failed to load dashboard data:', error)
         // Fallback to empty state
         setDashboardData({
-          todayCredits: 0,
-          todayDebits: 0,
+          selectedDateCredits: 0,
+          selectedDateDebits: 0,
           netBalance: 0,
-          todayCommissions: 0,
+          selectedDateCommissions: 0,
           totalTransactions: 0,
           activeAccounts: 0,
           totalLocations: 0,
           monthlyTotal: 0,
-          accountData: []
+          weeklyAverage: 0,
+          transactionCount: 0,
+          avgTransactionAmount: 0,
+          topAccount: { name: 'No data', amount: 0 },
+          recentTransactions: []
         })
       }
     }
 
     loadDashboardData()
-  }, [selectedLocationId])
-
-  const chartConfig = {
-    credits: { label: 'Credits', color: 'hsl(var(--success))' },
-    debits: { label: 'Debits', color: 'hsl(var(--destructive))' },
-    net: { label: 'Net Balance', color: 'hsl(var(--primary))' }
-  }
+  }, [selectedLocationId, selectedDate])
 
   return (
     <div className="space-y-3 max-w-full overflow-hidden">
@@ -160,10 +210,59 @@ export default function Dashboard() {
             </SelectContent>
           </Select>
 
-          <Badge variant="outline" className="flex items-center gap-1 self-start">
-            <Calendar className="w-3 h-3" />
-            Today
-          </Badge>
+          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full sm:w-auto justify-start text-left font-normal",
+                  !selectedDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => {
+                  if (date) {
+                    setSelectedDate(date)
+                    setIsCalendarOpen(false)
+                  }
+                }}
+                disabled={(date) =>
+                  date > new Date() || date < new Date("1900-01-01")
+                }
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedDate(new Date())}
+              className="text-xs"
+            >
+              Today
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const yesterday = new Date()
+                yesterday.setDate(yesterday.getDate() - 1)
+                setSelectedDate(yesterday)
+              }}
+              className="text-xs"
+            >
+              Yesterday
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -171,30 +270,30 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card className="border-success/20 bg-success/5 min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium truncate">Today's Credits</CardTitle>
+            <CardTitle className="text-sm font-medium truncate">Credits</CardTitle>
             <TrendingUp className="h-4 w-4 text-success flex-shrink-0" />
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-success truncate">
-              {formatCurrency(dashboardData.todayCredits)}
+              {formatCurrency(dashboardData.selectedDateCredits)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Money received from customers
+              Money received on {format(selectedDate, 'MMM dd')}
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-destructive/20 bg-destructive/5 min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium truncate">Today's Debits</CardTitle>
+            <CardTitle className="text-sm font-medium truncate">Debits</CardTitle>
             <TrendingDown className="h-4 w-4 text-destructive flex-shrink-0" />
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-destructive truncate">
-              {formatCurrency(dashboardData.todayDebits)}
+              {formatCurrency(dashboardData.selectedDateDebits)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Payments made to vendors
+              Payments made on {format(selectedDate, 'MMM dd')}
             </p>
           </CardContent>
         </Card>
@@ -210,77 +309,109 @@ export default function Dashboard() {
               {formatCurrency(dashboardData.netBalance)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Credits minus debits today
+              Net for {format(selectedDate, 'MMM dd')}
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-orange-500/20 bg-orange-500/5 min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium truncate">Today's Commission</CardTitle>
+            <CardTitle className="text-sm font-medium truncate">Commission</CardTitle>
             <Receipt className="h-4 w-4 text-orange-500 flex-shrink-0" />
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-orange-500 truncate">
-              {formatCurrency(dashboardData.todayCommissions)}
+              {formatCurrency(dashboardData.selectedDateCommissions)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Total commission earned today
+              Commission on {format(selectedDate, 'MMM dd')}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-6">
-        {/* Account-wise Distribution */}
+      {/* Additional Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        {/* Key Metrics */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Account-wise Distribution
+              <Activity className="w-5 h-5" />
+              Key Metrics
             </CardTitle>
             <CardDescription>
-              Total transaction amounts by account
+              Performance insights for {format(selectedDate, 'MMMM dd, yyyy')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Transactions</p>
+                <p className="text-2xl font-bold">{dashboardData.transactionCount}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Avg Amount</p>
+                <p className="text-2xl font-bold">{formatCurrencyCompact(dashboardData.avgTransactionAmount)}</p>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Top Account</p>
+              <p className="text-lg font-semibold">{dashboardData.topAccount.name}</p>
+              <p className="text-sm text-muted-foreground">{formatCurrency(dashboardData.topAccount.amount)}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Weekly Average</p>
+              <p className="text-lg font-semibold">{formatCurrency(dashboardData.weeklyAverage)}</p>
+              <p className="text-xs text-muted-foreground">Daily average for last 7 days</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Transactions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="w-5 h-5" />
+              Recent Transactions
+            </CardTitle>
+            <CardDescription>
+              Latest transactions for {format(selectedDate, 'MMMM dd, yyyy')}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="w-full overflow-hidden">
-              <ChartContainer config={chartConfig} className="h-64 sm:h-80 w-full">
-                <PieChart>
-                  <Pie
-                    data={dashboardData.accountData}
-                    dataKey="total"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={60}
-                  >
-                    {dashboardData.accountData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <ChartTooltip
-                    content={<ChartTooltipContent />}
-                    formatter={(value: number) => [formatCurrencyCompact(value), '']}
-                  />
-                </PieChart>
-              </ChartContainer>
-            </div>
-
-            {/* Legend */}
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {dashboardData.accountData.map((item, index) => (
-                <div key={index} className="flex items-center gap-2 min-w-0">
-                  <div
-                    className="w-3 h-3 rounded-sm flex-shrink-0"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-sm text-muted-foreground truncate">
-                    {item.name}
-                  </span>
+            <div className="space-y-3">
+              {dashboardData.recentTransactions.length > 0 ? (
+                dashboardData.recentTransactions.map((transaction, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${
+                        transaction.type === 'credit' ? 'bg-success' : 'bg-destructive'
+                      }`} />
+                      <div>
+                        <p className="text-sm font-medium">{transaction.accounts?.name || 'Unknown'}</p>
+                        <p className="text-xs text-muted-foreground">{transaction.transaction_no}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-semibold ${
+                        transaction.type === 'credit' ? 'text-success' : 'text-destructive'
+                      }`}>
+                        {transaction.type === 'credit' ? '+' : '-'}{formatCurrencyCompact(transaction.amount)}
+                      </p>
+                      {transaction.commission > 0 && (
+                        <p className="text-xs text-orange-600">
+                          +{formatCurrencyCompact(transaction.commission)} comm.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Receipt className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No transactions found for this date</p>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
